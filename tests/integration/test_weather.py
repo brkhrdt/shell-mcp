@@ -10,6 +10,10 @@ async def test_get_alerts_integration():
     # Should return either alert data or error message
     assert isinstance(result, str)
     assert len(result) > 0
+    # Check for specific formatted content
+    assert "Event:" in result
+    assert "Area:" in result
+    assert "Severity:" in result
 
 @pytest.mark.asyncio
 @pytest.mark.integration
@@ -20,7 +24,8 @@ async def test_get_forecast_integration():
     # Should return either forecast data or error message
     assert isinstance(result, str)
     assert len(result) > 0
-    assert result == 'hi'
+    # Check for specific formatted content
+    assert "Temperature:" in result
 
 @pytest.mark.asyncio
 @pytest.mark.integration
@@ -29,6 +34,8 @@ async def test_get_alerts_no_alerts_integration():
     result = await get_alerts("AK")  # Alaska unlikely to have active alerts
     assert isinstance(result, str)
     assert len(result) > 0
+    # Check for specific success message
+    assert "No active alerts" in result
 
 @pytest.mark.asyncio
 @pytest.mark.integration
@@ -37,3 +44,5 @@ async def test_get_forecast_invalid_coordinates():
     result = await get_forecast(91, 0)  # Invalid latitude
     assert isinstance(result, str)
     assert len(result) > 0
+    # Check for specific error message
+    assert "Unable to fetch" in result
