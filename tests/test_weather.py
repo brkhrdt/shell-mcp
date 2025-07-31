@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from src.weather import make_nws_request, get_alerts, get_forecast
+from weather import make_nws_request, get_alerts, get_forecast
 
 @pytest.mark.asyncio
 async def test_make_nws_request_success():
@@ -35,7 +35,7 @@ def test_format_alert():
         }
     }
     
-    from src.weather import format_alert
+    from weather import format_alert
     result = format_alert(feature)
     assert "Severe Thunderstorm Warning" in result
     assert "Cook County" in result
@@ -44,7 +44,7 @@ def test_format_alert():
 @pytest.mark.asyncio
 async def test_get_alerts_no_data():
     """Test get_alerts with no data"""
-    with patch('src.weather.make_nws_request') as mock_request:
+    with patch('weather.make_nws_request') as mock_request:
         mock_request.return_value = None
         
         result = await get_alerts("CA")
@@ -53,7 +53,7 @@ async def test_get_alerts_no_data():
 @pytest.mark.asyncio
 async def test_get_alerts_no_alerts():
     """Test get_alerts with no alerts"""
-    with patch('src.weather.make_nws_request') as mock_request:
+    with patch('weather.make_nws_request') as mock_request:
         mock_request.return_value = {"features": []}
         
         result = await get_alerts("CA")
@@ -62,7 +62,7 @@ async def test_get_alerts_no_alerts():
 @pytest.mark.asyncio
 async def test_get_forecast_no_points():
     """Test get_forecast with no points data"""
-    with patch('src.weather.make_nws_request') as mock_request:
+    with patch('weather.make_nws_request') as mock_request:
         mock_request.return_value = None
         
         result = await get_forecast(41.8781, -87.6298)
@@ -71,7 +71,7 @@ async def test_get_forecast_no_points():
 @pytest.mark.asyncio
 async def test_get_forecast_no_forecast():
     """Test get_forecast with no forecast data"""
-    with patch('src.weather.make_nws_request') as mock_request:
+    with patch('weather.make_nws_request') as mock_request:
         # First call returns points data
         mock_request.side_effect = [
             {
