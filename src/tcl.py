@@ -1,5 +1,6 @@
 import subprocess
 import asyncio
+import logging as log
 from mcp.server.fastmcp import FastMCP
 
 # Initialize FastMCP server
@@ -20,9 +21,12 @@ async def run_tcl(command: str) -> str:
     """
     global _tcl_process
     
+    log.debug(f"Executing Tcl command: {command}")
+    
     try:
         # Start tclsh process if not already running
         if _tcl_process is None:
+            log.debug("Starting new tclsh process")
             _tcl_process = subprocess.Popen(
                 ["tclsh"],
                 stdin=subprocess.PIPE,
@@ -33,6 +37,7 @@ async def run_tcl(command: str) -> str:
             )
         
         # Send command to tclsh process
+        log.debug(f"Sending command to tclsh: {command}")
         _tcl_process.stdin.write(command + "\n")
         _tcl_process.stdin.flush()
         
@@ -48,17 +53,23 @@ async def run_tcl(command: str) -> str:
                 if not line:
                     break
                 output += line
+                log.debug(f"Received from tclsh: {repr(line)}")
                 # Check if we have a prompt (simple check)
                 if line.strip().endswith("> "):
                     break
         except asyncio.TimeoutError:
+            log.debug("Timeout reading from tclsh")
             pass
             
         # Remove the last newline and any trailing whitespace
-        return output.strip()
+        result = output.strip()
+        log.debug(f"Final result: {repr(result)}")
+        return result
         
     except Exception as e:
-        return f"Error executing Tcl command: {str(e)}"
+        error_msg = f"Error executing Tcl command: {str(e)}"
+        log.debug(error_msg)
+        return error_msg
 
 if __name__ == "__main__":
     # Initialize and run the server
