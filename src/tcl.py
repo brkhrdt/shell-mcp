@@ -41,30 +41,31 @@ async def run_tcl(command: str) -> str:
         _tcl_process.stdin.write(command + "\n")
         _tcl_process.stdin.flush()
         
-        # Read the output with a simple timeout approach
+        # Read the output until we see the Tcl prompt ("% ")
         try:
-            # Read all available output
             output = ""
+            prompt_found = False
             
-            # Read until we get a prompt or timeout (simple approach)
-            for _ in range(10):  # Try up to 10 times
+            # Read until we find the prompt
+            while not prompt_found:
                 try:
                     line = await asyncio.wait_for(
                         asyncio.get_event_loop().run_in_executor(None, _tcl_process.stdout.readline),
-                        timeout=0.5
+                        timeout=2.0
                     )
                     if not line:
                         break
                     output += line
                     log.debug(f"Received from tclsh: {repr(line)}")
                     
-                    # Check if this looks like a prompt (Tcl typically ends with newline)
-                    if line.strip() and not line.startswith("tclsh"):
-                        break
+                    # Check if this is the Tcl prompt
+                    if line.strip() == "% ":
+                        prompt_found = True
                         
                 except asyncio.TimeoutError:
-                    # No more output available, but continue to check if process is alive
-                    pass
+                    # If timeout, continue reading in case we missed the prompt
+                    # or the command is still executing
+                    break
                     
             result = output.strip()
             log.debug(f"Final result: {repr(result)}")
