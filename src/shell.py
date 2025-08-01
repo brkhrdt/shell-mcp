@@ -1,6 +1,7 @@
 import asyncio
 import subprocess
 import re
+import logging as log
 from typing import Optional
 
 class InteractiveShell:
@@ -14,6 +15,7 @@ class InteractiveShell:
         
     async def start(self):
         """Start the interactive shell process."""
+        log.info(f"Starting shell with command '{self.command}'")
         self.process = subprocess.Popen(
             self.command,
             stdin=subprocess.PIPE,
@@ -27,6 +29,7 @@ class InteractiveShell:
         
         # Start reading output in background
         self._reader_task = asyncio.create_task(self._read_output())
+        log.info("Shell started successfully")
         
     async def _read_output(self):
         """Background task to read process output."""
@@ -41,7 +44,9 @@ class InteractiveShell:
                 if not line:
                     break
                 self._output_buffer += line
-            except Exception:
+                log.debug(f"Received output: {repr(line)}")
+            except Exception as e:
+                log.debug(f"Error reading output: {e}")
                 break
                 
     async def run_command(self, command: str) -> str:
@@ -49,6 +54,8 @@ class InteractiveShell:
         if not self.process:
             raise RuntimeError("Shell not started")
             
+        log.info(f"Running command: '{command}'")
+        
         # Send command
         self.process.stdin.write(command + "\n")
         self.process.stdin.flush()
@@ -67,6 +74,7 @@ class InteractiveShell:
                 output = '\n'.join(result_lines)
                 # Remove from buffer
                 self._output_buffer = self._output_buffer[len(output):]
+                log.debug(f"Command output: {repr(output)}")
                 return output
                 
             # Small delay to prevent busy waiting
@@ -74,6 +82,7 @@ class InteractiveShell:
             
     async def close(self):
         """Close the shell process."""
+        log.info("Closing shell")
         if self.process:
             self.process.stdin.write("exit\n")
             self.process.stdin.flush()
@@ -81,3 +90,4 @@ class InteractiveShell:
             
         if self._reader_task:
             self._reader_task.cancel()
+        log.info("Shell closed")
