@@ -31,7 +31,7 @@ async def run_tcl(command: str) -> str:
                 ["tclsh"],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,  # Redirect stderr to stdout
+                stderr=subprocess.PIPE,  # Redirect stderr to stdout
                 text=True,
                 bufsize=1
             )
