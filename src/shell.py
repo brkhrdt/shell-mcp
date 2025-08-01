@@ -33,16 +33,28 @@ class GenericInteractiveShell:
         """Start the interactive shell process."""
         log.info(f"Starting generic shell with command '{' '.join(self._shell_command_list)}'")
         
-        self.process = await asyncio.create_subprocess_exec( # <<< KEY CHANGE HERE
-            *self._shell_command_list, # Unpack the list of command arguments
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT, # Direct stderr to stdout for simpler reading
-            # text=True is the default for StreamReader/StreamWriter
-            # bufsize is not directly applicable here as asyncio manages buffering
-            cwd=self.cwd,
-            # shell=False (default for create_subprocess_exec)
-        )
+        try:
+            self.process = await asyncio.create_subprocess_exec( # <<< KEY CHANGE HERE
+                *self._shell_command_list, # Unpack the list of command arguments
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT, # Direct stderr to stdout for simpler reading
+                # text=True is the default for StreamReader/StreamWriter
+                # bufsize is not directly applicable here as asyncio manages buffering
+                cwd=self.cwd,
+                # shell=False (default for create_subprocess_exec)
+            )
+            
+            # Check if process started successfully
+            if not self.process or self.process.returncode is not None:
+                raise RuntimeError(f"Failed to start shell process. Return code: {self.process.returncode}")
+                
+            if not self.process.pid:
+                raise RuntimeError("Process started but no PID available")
+                
+        except Exception as e:
+            log.error(f"Error starting shell process: {e}")
+            raise RuntimeError(f"Could not start shell process: {e}")
         
         # Start reading output in background
         self._reader_task = asyncio.create_task(self._read_output())

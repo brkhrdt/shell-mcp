@@ -23,6 +23,16 @@ async def test_generic_interactive_shell_start_and_close():
 
 
 @pytest.mark.asyncio
+async def test_generic_interactive_shell_start_failure():
+    """Test that shell properly handles failed process start."""
+    # Try to start a non-existent command
+    shell = GenericInteractiveShell(["nonexistent_command_12345"], prompt_patterns=[r'bash.*\$'])
+    
+    with pytest.raises(RuntimeError, match="Could not start shell process"):
+        await shell.start()
+
+
+@pytest.mark.asyncio
 async def test_generic_interactive_shell_run_command():
     """Test running a simple command in the shell."""
     # Use the same command pattern as in main()
