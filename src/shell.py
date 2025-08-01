@@ -1,5 +1,6 @@
 import asyncio
 import subprocess
+import re
 from typing import Optional
 
 class InteractiveShell:
@@ -54,13 +55,14 @@ class InteractiveShell:
         
         # Wait for prompt
         while True:
-            if self.prompt in self._output_buffer:
+            # Use regex search instead of string matching
+            if re.search(self.prompt, self._output_buffer):
                 # Extract output up to and including the prompt
                 lines = self._output_buffer.split('\n')
                 result_lines = []
                 for line in lines:
                     result_lines.append(line)
-                    if self.prompt in line:
+                    if re.search(self.prompt, line):
                         break
                 output = '\n'.join(result_lines)
                 # Remove from buffer
