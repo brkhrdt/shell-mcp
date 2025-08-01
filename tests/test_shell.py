@@ -107,3 +107,38 @@ async def test_generic_interactive_shell_complex_command():
         
     finally:
         await shell.close()
+
+
+@pytest.mark.asyncio
+async def test_tclsh_command():
+    """Test running TCL command expr 2+3 which should result in 5."""
+    # Use tclsh as the shell command
+    shell = GenericInteractiveShell(["tclsh"], prompt_patterns=[r'%'])
+    await shell.start()
+    
+    try:
+        # Run the TCL expression
+        result = await shell.run_command("expr 2+3")
+        
+        # Verify output contains expected result
+        assert "5" in result
+        
+    finally:
+        await shell.close()
+
+@pytest.mark.asyncio
+async def test_python_command():
+    """Test running TCL command expr 2+3 which should result in 5."""
+    # Use python as the shell command
+    shell = GenericInteractiveShell(["python", '-i'], prompt_patterns=[r'>>>'])
+    await shell.start()
+    
+    try:
+        # Run the TCL expression
+        result = await shell.run_command("2+3")
+        
+        # Verify output contains expected result
+        assert "5" in result
+        
+    finally:
+        await shell.close()
