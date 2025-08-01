@@ -16,7 +16,7 @@ class GenericInteractiveShell:
         r'[\$%#>] $'                 # $,%,#> at end of string with a space
     ]
 
-    def __init__(self, shell_command: str | List[str], cwd: Optional[str] = None):
+    def __init__(self, shell_command: str | List[str], cwd: Optional[str] = None, prompt_patterns: Optional[List[str]] = None):
         if isinstance(shell_command, str):
             # Use shlex.split for robust parsing of shell commands
             self._shell_command_list = shlex.split(shell_command)
@@ -29,7 +29,9 @@ class GenericInteractiveShell:
         self._output_buffer = ""
         self.prompt_detected = False 
 
-        self._prompt_regexes = [re.compile(p, re.MULTILINE) for p in self.COMMON_PROMPT_PATTERNS]
+        # Use provided prompt patterns or fall back to default patterns
+        patterns = prompt_patterns if prompt_patterns is not None else self.COMMON_PROMPT_PATTERNS
+        self._prompt_regexes = [re.compile(p, re.MULTILINE) for p in patterns]
 
     async def start(self):
         """Start the interactive shell process."""
