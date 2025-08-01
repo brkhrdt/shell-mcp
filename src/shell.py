@@ -162,13 +162,13 @@ class GenericInteractiveShell:
         
         return command_output.strip()
 
-    async def close(self):
+    async def close(self, exit_command: str = "exit"):
         """Close the shell process."""
         log.info("Closing shell")
         if self.process and self.process.returncode is None: # Check if still running
             try:
                 # Attempt graceful exit
-                self.process.stdin.write(b"exit\n") # Send bytes
+                self.process.stdin.write((exit_command + "\n").encode('utf-8')) # Send bytes
                 await self.process.stdin.drain()
                 # Give it a moment to exit gracefully
                 await asyncio.wait_for(self.process.wait(), timeout=5) # Await process.wait()
