@@ -7,7 +7,7 @@ from shell import InteractiveShell
 @pytest.mark.asyncio
 async def test_interactive_shell_start_and_close():
     """Test that shell can be started and closed properly."""
-    shell = InteractiveShell("bash", "$")
+    shell = InteractiveShell("bash --norc", "bash.*$")
     await shell.start()
     
     # Verify process is running
@@ -24,7 +24,7 @@ async def test_interactive_shell_start_and_close():
 @pytest.mark.asyncio
 async def test_interactive_shell_run_command():
     """Test running a simple command in the shell."""
-    shell = InteractiveShell("bash", "$")
+    shell = InteractiveShell("bash --norc", "bash.*$")
     await shell.start()
     
     try:

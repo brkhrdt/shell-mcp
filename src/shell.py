@@ -16,12 +16,8 @@ class GenericInteractiveShell:
         r'[\$%#>] $'                 # $,%,#> at end of string with a space
     ]
 
-    def __init__(self, shell_command: str | List[str], cwd: Optional[str] = None, prompt_patterns: Optional[List[str]] = None):
-        if isinstance(shell_command, str):
-            # Use shlex.split for robust parsing of shell commands
-            self._shell_command_list = shlex.split(shell_command)
-        else:
-            self._shell_command_list = shell_command
+    def __init__(self, shell_command: List[str], cwd: Optional[str] = None, prompt_patterns: Optional[List[str]] = None):
+        self._shell_command_list = shell_command
 
         self.cwd = cwd
         self.process: Optional[asyncio.Process] = None # Change type hint to asyncio.Process
@@ -212,7 +208,7 @@ async def main():
         bash_path = shutil.which("bash")
         if bash_path:
             # Pass 'bash -i' to ensure it's interactive
-            bash_shell = GenericInteractiveShell(shell_command=shlex.split(f"{bash_path} --norc -i"), prompt_patterns=[r'bash.*\$']) 
+            bash_shell = GenericInteractiveShell(shell_command=[bash_path, "--norc", "-i"], prompt_patterns=[r'bash.*\$']) 
             try:
                 await bash_shell.start()
                 
@@ -243,7 +239,7 @@ async def main():
     if os.name == 'nt':
         log.info("\n--- Running Generic CMD.exe Example (asyncio.Process) ---")
         # For cmd.exe, just "cmd.exe" usually starts an interactive session.
-        cmd_shell = GenericInteractiveShell(shell_command="cmd.exe")
+        cmd_shell = GenericInteractiveShell(shell_command=["cmd.exe"])
         try:
             await cmd_shell.start()
 
