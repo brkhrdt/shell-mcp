@@ -212,7 +212,7 @@ async def main():
         bash_path = shutil.which("bash")
         if bash_path:
             # Pass 'bash -i' to ensure it's interactive
-            bash_shell = GenericInteractiveShell(shell_command=shlex.split(f"{bash_path} -i")) 
+            bash_shell = GenericInteractiveShell(shell_command=shlex.split(f"{bash_path} --norc -i"), prompt_patterns=[r'bash.*\$']) 
             try:
                 await bash_shell.start()
                 
