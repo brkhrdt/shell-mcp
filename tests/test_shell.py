@@ -130,7 +130,7 @@ async def test_tclsh_command():
 async def test_python_command():
     """Test running TCL command expr 2+3 which should result in 5."""
     # Use python as the shell command
-    shell = GenericInteractiveShell(["python", '-i'], prompt_patterns=[r'>>>'])
+    shell = GenericInteractiveShell(["python", '-i'], prompt_patterns=[r'^>>> '])
     await shell.start()
     
     try:
@@ -141,4 +141,4 @@ async def test_python_command():
         assert "5" in result
         
     finally:
-        await shell.close()
+        await shell.close('exit()')
