@@ -38,13 +38,14 @@ class InteractiveShell:
             
         while True:
             try:
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, self.process.stdout.readline
+                # Read all available data, not just one line
+                data = await asyncio.get_event_loop().run_in_executor(
+                    None, self.process.stdout.read, 1
                 )
-                if not line:
+                if not data:
                     break
-                self._output_buffer += line
-                log.debug(f"Received output: {repr(line)}")
+                self._output_buffer += data
+                log.debug(f"Received data: {repr(data)}")
             except Exception as e:
                 log.debug(f"Error reading output: {e}")
                 break
