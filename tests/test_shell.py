@@ -100,6 +100,10 @@ async def test_generic_interactive_shell_complex_command():
         
         # Should contain some output (prompt may be stripped)
         assert len(result) > 0
+        # Check that at least one line starts with 'd' and ends with '.'
+        lines = result.split('\n')
+        dot_line_found = any(line.startswith('d') and line.endswith('.') for line in lines if line.strip())
+        assert dot_line_found
         
     finally:
         await shell.close()
