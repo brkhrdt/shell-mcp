@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional, List
 import uuid
 import asyncio
 from mcp.server.fastmcp import FastMCP
-from .pexpect_shell import InteractiveShell
+from shell import InteractiveShell
 
 # Initialize FastMCP server
 mcp = FastMCP("interactive-shell")
