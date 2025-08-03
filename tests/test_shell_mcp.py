@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+import pytest_asyncio
 from unittest.mock import patch, MagicMock
 from shell_mcp import (
     start_shell_session, 
@@ -11,7 +12,7 @@ from shell_mcp import (
 )
 
 # Fixture to clean up sessions after each test
-@pytest.fixture(autouse=True)
+@pytest_asyncio.fixture
 async def cleanup_sessions():
     """Clean up all sessions before and after each test."""
     # Clear sessions before test
@@ -214,8 +215,8 @@ async def test_multiple_active_sessions():
         assert "tclsh" in sessions_info
         
         # Run commands in both sessions
-        bash_result = await run_shell_command(bash_session_id, "echo 'bash test'")
-        assert "bash test" in bash_result
+        bash_result = await run_shell_command(bash_session_id, "echo 'hello world'")
+        assert "hello world" in bash_result
         
         tcl_result = await run_shell_command(tcl_session_id, "expr 10+5")
         assert "15" in tcl_result
