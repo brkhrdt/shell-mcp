@@ -1,5 +1,5 @@
 import pytest
-from src.pexpect_shell import PexpectInteractiveShell
+from pexpect_shell import PexpectInteractiveShell
 
 
 def test_pexpect_interactive_shell_start_and_close():
@@ -94,9 +94,10 @@ def test_pexpect_interactive_shell_complex_command():
         
         # Should contain some output
         assert len(result) > 0
-        # Check that at least one line starts with 'd' and ends with '.'
+        # Check that the second line starts with 'd' and ends with '.'
         lines = result.split('\n')
-        dot_line_found = any(line.startswith('d') and line.endswith('.') for line in lines if line.strip())
+        line = lines[1].strip()
+        dot_line_found = line.startswith('d') and line.endswith('.')
         assert dot_line_found
         
     finally:
@@ -121,7 +122,7 @@ def test_tclsh_command():
 
 def test_python_command():
     """Test running Python command 2+3 which should result in 5."""
-    shell = PexpectInteractiveShell(["python", '-i'], prompt_patterns=[r'^>>> '])
+    shell = PexpectInteractiveShell(["python"], prompt_patterns=[r'\n>>>\s'])
     shell.start()
     
     try:
