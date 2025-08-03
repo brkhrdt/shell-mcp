@@ -8,7 +8,7 @@ from typing import Optional, List
 # Configure logging for better debugging
 log.basicConfig(level=log.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class PexpectInteractiveShell:
+class InteractiveShell:
     COMMON_PROMPT_PATTERNS = [
         r'\r?\n[^\S\r\n]*[\$%#>] ',  # Newline, optional leading whitespace, then $,%,#,> and a space
         r'\r?\n[^\S\r\n]*[\$%#>]',   # Newline, optional leading whitespace, then $,%,#,> (no space)
@@ -27,7 +27,7 @@ class PexpectInteractiveShell:
         """Start the interactive shell process."""
         # Convert command list to single command string for pexpect
         command = ' '.join(self._shell_command_list)
-        log.info(f"Starting pexpect shell with command '{command}'")
+        log.info(f"Starting shell with command '{command}'")
         
         try:
             self.child = pexpect.spawn(command, cwd=self.cwd, timeout=timeout)
