@@ -11,6 +11,8 @@ dependencies = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
     "mcp-server>=0.1.0",
+    "types-pexpect>=4.9.0.20250516",
+    "pyright>=1.1.403",
 ]
 
 
