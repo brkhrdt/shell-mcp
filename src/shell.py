@@ -7,7 +7,7 @@ from typing import Optional, List
 
 
 # Configure logging for better debugging
-log.basicConfig(level=log.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+log.basicConfig(level=log.ERROR, format="%(asctime)s][SHELL]%(levelname)s- %(message)s")
 
 
 class InteractiveShell:
