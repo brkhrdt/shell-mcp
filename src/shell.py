@@ -121,9 +121,6 @@ class InteractiveShell:
         if not self.child or not self.child.isalive():
             raise RuntimeError("Shell not started or process has exited")
 
-        if command[-1] != "\n":
-            log.warning("Command does not end with newline. Appending it")
-            command += "\n"
         log.info(f"Running command: '{command}'")
 
         # Send command
