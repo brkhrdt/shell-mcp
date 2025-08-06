@@ -8,15 +8,22 @@ import time
 
 
 # Configure logging for better debugging
-log.basicConfig(level=log.ERROR, format="%(asctime)s][SHELL]%(levelname)s- %(message)s")
+log.basicConfig(level=log.DEBUG, format="%(asctime)s][SHELL]%(levelname)s- %(message)s")
+
+
+class CommandHistoryEntry(NamedTuple):
+    command: str
+    output: str
+    full_output: str
+    timestamp: float
 
 
 class InteractiveShell:
     COMMON_PROMPT_PATTERNS = [
-        r"\r?\n[^\S\r\n]*[\$%#>] ",  # Newline, optional leading whitespace, then $,%,#,> and a space
-        r"\r?\n[^\S\r\n]*[\$%#>]",  # Newline, optional leading whitespace, then $,%,#,> (no space)
-        r"[\$%#>] $",  # $,%,#> at end of string with a space
-        r"\r?\n>>>\s",  # $,%,#> at end of string with a space
+        r"\r?\n[^\S\r\n]*[\$%#>]+\s*",  # Newline, optional leading whitespace, then $,%,#,> and a space
+        # r"\r?\n[^\S\r\n]*[\$%#>]",  # Newline, optional leading whitespace, then $,%,#,> (no space)
+        # r"[\$%#>]+ $",  # $,%,#> at end of string with a space
+        # r"st\r?\n>>>\s",  # $,%,#> at end of string with a space
     ]
 
     def __init__(
@@ -37,13 +44,7 @@ class InteractiveShell:
         )
 
         # Initialize command history
-        self.command_history: List["InteractiveShell.CommandHistoryEntry"] = []
-
-    class CommandHistoryEntry(NamedTuple):
-        command: str
-        output: str
-        full_output: str
-        timestamp: float
+        self.command_history: List[CommandHistoryEntry] = []
 
     def start(self, timeout: float = 10):
         """Start the interactive shell process."""
@@ -97,14 +98,23 @@ class InteractiveShell:
                 else ""
             )
 
+            log.debug(f"child.before={self.child.before}")
+            log.debug(f"child.after={self.child.after}")
+
             return output.strip(), matched_prompt
 
-        except pexpect.TIMEOUT:
-            log.error(f"Timeout waiting for prompt. Last output: {self.child.before}")
-            raise TimeoutError(f"Timed out waiting for prompt after {timeout} seconds")
-        except pexpect.EOF:
-            log.error("Shell process terminated unexpectedly")
-            raise RuntimeError("Shell process terminated unexpectedly")
+        # except pexpect.TIMEOUT:
+        #     log.error(f"Timeout waiting for prompt. Last output: {self.child.before}")
+        #     log.error(str(self.child))
+        #     raise TimeoutError(f"Timed out waiting for prompt after {timeout} seconds")
+        # except pexpect.EOF:
+        #     log.error("Shell process terminated unexpectedly")
+        #     log.error(str(self.child))
+        #     raise RuntimeError("Shell process terminated unexpectedly")
+        except Exception as e:
+            log.error(f"Exception was thrown: {e}")
+            # log.error("debug information:")
+            # log.error(str(self.child))
 
     def run_command(self, command: str, timeout: float = 10) -> str:
         """Run a command and return the complete output including prompt and command."""
@@ -136,7 +146,7 @@ class InteractiveShell:
 
         # Record the command in history with separated command and output
         timestamp = time.time()
-        history_entry = self.CommandHistoryEntry(
+        history_entry = CommandHistoryEntry(
             command=command,
             output=cleaned_output.strip(),
             full_output=full_output,
@@ -148,11 +158,11 @@ class InteractiveShell:
         log.debug(f"OUTPUT: {full_output}")
         return full_output
 
-    def get_command_history(self) -> List["InteractiveShell.CommandHistoryEntry"]:
+    def get_command_history(self) -> List[CommandHistoryEntry]:
         """Get the complete command history in chronological order."""
         return self.command_history.copy()
 
-    def get_last_command(self) -> Optional["InteractiveShell.CommandHistoryEntry"]:
+    def get_last_command(self) -> Optional[CommandHistoryEntry]:
         """Get the most recently executed command and its output."""
         return self.command_history[-1] if self.command_history else None
 
