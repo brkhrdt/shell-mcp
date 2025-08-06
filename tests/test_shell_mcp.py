@@ -231,7 +231,11 @@ async def test_python_multiline_command():
         )
 
         # Verify output contains expected result
-        assert "vier" in result
+        assert "\neins" in result
+        assert "\nzwei" in result
+        assert "\ndrei" in result
+        assert "\nvier" in result
+        assert "\nfünf" in result
 
     finally:
         await close_shell_session(session_id, "exit()")
