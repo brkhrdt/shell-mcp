@@ -2,6 +2,7 @@ from typing import Dict, Optional, List
 import uuid
 import asyncio
 import re
+import pexpect
 from mcp.server.fastmcp import FastMCP
 from shell import InteractiveShell
 
@@ -187,24 +188,36 @@ async def get_shell_buffer(session_id: str) -> str:
         del _active_sessions[session_id]
         return f"Session {session_id} is no longer active (process died)."
 
-    try:
-        # Get the complete output from pexpect
-        # shell.child.buffer only contains recent unmatched output
-        # Use before + after to get more complete output, or check if there's a logfile
-        if hasattr(shell.child, 'logfile_read') and shell.child.logfile_read:
-            # If logging is enabled, that would have the full buffer
-            return "Logfile access not implemented"
-        else:
-            # Return the available buffer content
-            buffer_content = ""
-            if hasattr(shell.child, 'before') and shell.child.before:
-                buffer_content += shell.child.before.decode('utf-8', errors='replace')
-            if hasattr(shell.child, 'after') and shell.child.after:
-                buffer_content += shell.child.after.decode('utf-8', errors='replace')
-            if shell.child.buffer:
-                buffer_content += shell.child.buffer
-            
-            return buffer_content if buffer_content else "Buffer is empty"
+        # Use read_nonblocking to get available output without affecting expect state
+        buffer_content = ""
+        
+        # First, get any existing buffer content
+        if shell.child.buffer:
+            buffer_content += shell.child.buffer
+        
+        # Then try to read any additional available data
+        try:
+            # Read up to 64KB of available data without blocking
+            additional_data = shell.child.read_nonblocking(size=65536, timeout=0)
+            if additional_data:
+                buffer_content += additional_data.decode('utf-8', errors='replace')
+        except pexpect.TIMEOUT:
+            # No additional data available, that's fine
+            pass
+        except pexpect.EOF:
+            # Process has ended
+            buffer_content += "\n[Process ended]"
+        
+        # Also include before/after if they exist (from previous expect operations)
+        if hasattr(shell.child, 'before') and shell.child.before:
+            before_content = shell.child.before.decode('utf-8', errors='replace')
+            buffer_content = before_content + buffer_content
+        
+        if hasattr(shell.child, 'after') and shell.child.after:
+            after_content = shell.child.after.decode('utf-8', errors='replace')
+            buffer_content = buffer_content + after_content
+        
+        return buffer_content if buffer_content else "Buffer is empty"
 
     except Exception as e:
         return f"Error retrieving buffer for session {session_id}: {str(e)}"
