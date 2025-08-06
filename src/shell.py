@@ -3,7 +3,8 @@ import re
 import logging as log
 import os
 import shutil
-from typing import Optional, List
+from typing import Optional, List, NamedTuple
+import time
 
 
 # Configure logging for better debugging
@@ -33,6 +34,14 @@ class InteractiveShell:
             if prompt_patterns is not None
             else self.COMMON_PROMPT_PATTERNS
         )
+        
+        # Initialize command history
+        self.command_history: List['InteractiveShell.CommandHistoryEntry'] = []
+
+    class CommandHistoryEntry(NamedTuple):
+        command: str
+        output: str
+        timestamp: float  # Unix timestamp when command was executed
 
     def start(self, timeout: float = 10):
         """Start the interactive shell process."""
@@ -104,9 +113,31 @@ class InteractiveShell:
         match = re.search(command_echo_pattern, command_output)
         if match and match.start() == 0:
             cleaned_output = command_output[match.end() :]
-            return cleaned_output.strip()
+        else:
+            cleaned_output = command_output
 
-        return command_output.strip()
+        # Record the command in history
+        timestamp = time.time()
+        history_entry = self.CommandHistoryEntry(
+            command=command,
+            output=cleaned_output.strip(),
+            timestamp=timestamp
+        )
+        self.command_history.append(history_entry)
+
+        return cleaned_output.strip()
+
+    def get_command_history(self) -> List['InteractiveShell.CommandHistoryEntry']:
+        """Get the complete command history in chronological order."""
+        return self.command_history.copy()
+    
+    def get_last_command(self) -> Optional['InteractiveShell.CommandHistoryEntry']:
+        """Get the most recently executed command and its output."""
+        return self.command_history[-1] if self.command_history else None
+    
+    def clear_history(self) -> None:
+        """Clear the command history."""
+        self.command_history.clear()
 
     def close(self, exit_command: str = "exit"):
         """Close the shell process."""
