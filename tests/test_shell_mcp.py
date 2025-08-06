@@ -171,10 +171,9 @@ async def test_complex_command():
         assert len(result) > 0
         # Check that the second line starts with 'd' and ends with '.'
         lines = result.split("\n")
-        if len(lines) > 2:
-            line = lines[2].strip()
-            dot_line_found = line.startswith("d") and line.endswith(".")
-            assert dot_line_found
+        line = lines[2].strip()
+        dot_line_found = line.startswith("d") and line.endswith(".")
+        assert dot_line_found
 
     finally:
         await close_shell_session(session_id)
