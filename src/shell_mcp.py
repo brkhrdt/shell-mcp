@@ -168,12 +168,11 @@ async def close_all_sessions() -> str:
 
 
 @mcp.tool()
-async def get_shell_buffer(session_id: str, clean_for_markdown: bool = True) -> str:
+async def get_shell_buffer(session_id: str) -> str:
     """Get the complete shell session buffer from command history.
 
     Args:
         session_id: ID of the shell session
-        clean_for_markdown: Whether to clean output for markdown display
 
     Returns:
         Complete session buffer reconstructed from command history
@@ -189,25 +188,40 @@ async def get_shell_buffer(session_id: str, clean_for_markdown: bool = True) -> 
         return f"Session {session_id} is no longer active (process died)."
 
     try:
+        return shell.child.buffer
+
+    except Exception as e:
+        return f"Error retrieving buffer for session {session_id}: {str(e)}"
+
+
+@mcp.tool()
+async def get_command_output(session_id: str) -> str:
+    """Get the buffer for the last command ran in the session.
+
+    Args:
+        session_id: ID of the shell session
+
+    Returns:
+        Complete buffer for the last command executed
+    """
+    if session_id not in _active_sessions:
+        return f"Session {session_id} not found. Use get_active_sessions() to see available sessions."
+
+    shell = _active_sessions[session_id]
+
+    if not shell.child or not shell.child.isalive():
+        # Clean up dead session
+        del _active_sessions[session_id]
+        return f"Session {session_id} is no longer active (process died)."
+
+    try:
         history = shell.get_command_history()
-        
+
         if not history:
             return f"Session {session_id} has no command history."
-        
-        # Stitch together the full_output from all history entries
-        buffer_parts = []
-        for entry in history:
-            buffer_parts.append(entry.full_output)
-        
-        buffer = "".join(buffer_parts)
-        
-        if clean_for_markdown:
-            # Clean for markdown display
-            buffer = buffer.replace('\r\n', '\n').replace('\r', '\n')
-            # Remove excessive blank lines
-            buffer = re.sub(r'\n{3,}', '\n\n', buffer)
-        
-        return buffer
+
+        # Get the last command
+        return history[-1].full_output
 
     except Exception as e:
         return f"Error retrieving buffer for session {session_id}: {str(e)}"
