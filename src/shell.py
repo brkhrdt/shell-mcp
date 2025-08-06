@@ -64,13 +64,13 @@ class InteractiveShell:
         log.info("Shell process started.")
 
         # Wait for the initial prompt
-        self._wait_for_prompt(initial_startup=True, timeout=timeout)
+        _, _ = self._wait_for_prompt(initial_startup=True, timeout=timeout)
         log.info("Initial shell prompt detected.")
 
     def _wait_for_prompt(
         self, initial_startup: bool = False, timeout: float = 10
-    ) -> str:
-        """Wait for a prompt-like pattern to appear."""
+    ) -> tuple[str, str]:
+        """Wait for a prompt-like pattern to appear. Returns (output, matched_prompt)."""
         if not self.child:
             raise RuntimeError("Shell not started")
 
@@ -81,13 +81,21 @@ class InteractiveShell:
                 f"Prompt pattern {index} matched: '{self.prompt_patterns[index]}'"
             )
 
-            # Return the output before the prompt
+            # Get the output before the prompt
             output = (
                 self.child.before.decode("utf-8", errors="ignore")
                 if self.child.before
                 else ""
             )
-            return output.strip()
+            
+            # Get the matched prompt
+            matched_prompt = (
+                self.child.after.decode("utf-8", errors="ignore")
+                if self.child.after
+                else ""
+            )
+
+            return output.strip(), matched_prompt
 
         except pexpect.TIMEOUT:
             log.error(f"Timeout waiting for prompt. Last output: {self.child.before}")
@@ -107,10 +115,10 @@ class InteractiveShell:
         self.child.sendline(command)
 
         # Wait for the prompt to reappear
-        command_output = self._wait_for_prompt(timeout=timeout)
+        command_output, matched_prompt = self._wait_for_prompt(timeout=timeout)
 
-        # The full output includes everything from before sending the command
-        full_output = command_output
+        # The full output includes everything: command output + the prompt
+        full_output = command_output + matched_prompt
 
         # For history, separate the command from its actual output
         # Remove the echoed command from the output for the history entry
