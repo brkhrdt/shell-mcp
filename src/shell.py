@@ -40,7 +40,8 @@ class InteractiveShell:
 
     class CommandHistoryEntry(NamedTuple):
         command: str
-        output: str
+        output: str  # This will now contain only the command output, not the command itself
+        full_output: str  # This will contain the complete output including prompt and command
         timestamp: float  # Unix timestamp when command was executed
 
     def start(self, timeout: float = 10):
@@ -96,7 +97,7 @@ class InteractiveShell:
             raise RuntimeError("Shell process terminated unexpectedly")
 
     def run_command(self, command: str, timeout: float = 10) -> str:
-        """Run a command and wait for prompt."""
+        """Run a command and return the complete output including prompt and command."""
         if not self.child or not self.child.isalive():
             raise RuntimeError("Shell not started or process has exited")
 
@@ -108,24 +109,30 @@ class InteractiveShell:
         # Wait for the prompt to reappear
         command_output = self._wait_for_prompt(timeout=timeout)
 
-        # Post-processing: remove the echoed command from the output if it exists
+        # The full output includes everything from before sending the command
+        full_output = command_output
+
+        # For history, separate the command from its actual output
+        # Remove the echoed command from the output for the history entry
         command_echo_pattern = re.escape(command) + r"\r?\n"
         match = re.search(command_echo_pattern, command_output)
         if match and match.start() == 0:
-            cleaned_output = command_output[match.end() :]
+            cleaned_output = command_output[match.end():]
         else:
             cleaned_output = command_output
 
-        # Record the command in history
+        # Record the command in history with separated command and output
         timestamp = time.time()
         history_entry = self.CommandHistoryEntry(
             command=command,
             output=cleaned_output.strip(),
+            full_output=full_output,
             timestamp=timestamp
         )
         self.command_history.append(history_entry)
 
-        return cleaned_output.strip()
+        # Return the complete output including prompt and command
+        return full_output
 
     def get_command_history(self) -> List['InteractiveShell.CommandHistoryEntry']:
         """Get the complete command history in chronological order."""
