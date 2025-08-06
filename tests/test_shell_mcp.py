@@ -340,7 +340,7 @@ async def test_session_timeout():
 async def test_custom_exit_command():
     """Test using custom exit command for specific shells."""
     # Start a Python session
-    start_result = await start_shell_session(["python"], prompt_patterns=[r"\n>>>\s"])
+    start_result = await start_shell_session(["python"])
     session_id = start_result.split("Session ID: ")[1]
 
     # Close with Python-specific exit command

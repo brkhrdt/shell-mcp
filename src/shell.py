@@ -16,6 +16,7 @@ class InteractiveShell:
         r"\r?\n[^\S\r\n]*[\$%#>] ",  # Newline, optional leading whitespace, then $,%,#,> and a space
         r"\r?\n[^\S\r\n]*[\$%#>]",  # Newline, optional leading whitespace, then $,%,#,> (no space)
         r"[\$%#>] $",  # $,%,#> at end of string with a space
+        r"\r?\n>>>\s",  # $,%,#> at end of string with a space
     ]
 
     def __init__(
@@ -34,14 +35,18 @@ class InteractiveShell:
             if prompt_patterns is not None
             else self.COMMON_PROMPT_PATTERNS
         )
-        
+
         # Initialize command history
-        self.command_history: List['InteractiveShell.CommandHistoryEntry'] = []
+        self.command_history: List["InteractiveShell.CommandHistoryEntry"] = []
 
     class CommandHistoryEntry(NamedTuple):
         command: str
-        output: str  # This will now contain only the command output, not the command itself
-        full_output: str  # This will contain the complete output including prompt and command
+        output: (
+            str  # This will now contain only the command output, not the command itself
+        )
+        full_output: (
+            str  # This will contain the complete output including prompt and command
+        )
         timestamp: float  # Unix timestamp when command was executed
 
     def start(self, timeout: float = 10):
@@ -74,6 +79,7 @@ class InteractiveShell:
         if not self.child:
             raise RuntimeError("Shell not started")
 
+        log.debug("Waiting for prompt...")
         try:
             # Expect any of the prompt patterns
             index = self.child.expect(self.prompt_patterns, timeout=timeout)
@@ -87,7 +93,7 @@ class InteractiveShell:
                 if self.child.before
                 else ""
             )
-            
+
             # Get the matched prompt
             matched_prompt = (
                 self.child.after.decode("utf-8", errors="ignore")
@@ -121,14 +127,14 @@ class InteractiveShell:
         command_output, matched_prompt = self._wait_for_prompt(timeout=timeout)
 
         # The full output includes everything: command output + the prompt
-        full_output = command_output + matched_prompt
+        full_output = matched_prompt + command_output
 
         # For history, separate the command from its actual output
         # Remove the echoed command from the output for the history entry
         command_echo_pattern = re.escape(command) + r"\r?\n"
         match = re.search(command_echo_pattern, command_output)
         if match and match.start() == 0:
-            cleaned_output = command_output[match.end():]
+            cleaned_output = command_output[match.end() :]
         else:
             cleaned_output = command_output
 
@@ -138,21 +144,22 @@ class InteractiveShell:
             command=command,
             output=cleaned_output.strip(),
             full_output=full_output,
-            timestamp=timestamp
+            timestamp=timestamp,
         )
         self.command_history.append(history_entry)
 
         # Return the complete output including prompt and command
+        log.debug(f"OUTPUT: {full_output}")
         return full_output
 
-    def get_command_history(self) -> List['InteractiveShell.CommandHistoryEntry']:
+    def get_command_history(self) -> List["InteractiveShell.CommandHistoryEntry"]:
         """Get the complete command history in chronological order."""
         return self.command_history.copy()
-    
-    def get_last_command(self) -> Optional['InteractiveShell.CommandHistoryEntry']:
+
+    def get_last_command(self) -> Optional["InteractiveShell.CommandHistoryEntry"]:
         """Get the most recently executed command and its output."""
         return self.command_history[-1] if self.command_history else None
-    
+
     def clear_history(self) -> None:
         """Clear the command history."""
         self.command_history.clear()
