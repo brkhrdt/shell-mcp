@@ -1,6 +1,7 @@
 from typing import Dict, Optional, List
 import uuid
 import asyncio
+import re
 from mcp.server.fastmcp import FastMCP
 from shell import InteractiveShell
 
@@ -164,6 +165,52 @@ async def close_all_sessions() -> str:
         summary += f"\nErrors:\n" + "\n".join(errors)
 
     return summary
+
+
+@mcp.tool()
+async def get_shell_buffer(session_id: str, clean_for_markdown: bool = True) -> str:
+    """Get the complete shell session buffer from command history.
+
+    Args:
+        session_id: ID of the shell session
+        clean_for_markdown: Whether to clean output for markdown display
+
+    Returns:
+        Complete session buffer reconstructed from command history
+    """
+    if session_id not in _active_sessions:
+        return f"Session {session_id} not found. Use get_active_sessions() to see available sessions."
+
+    shell = _active_sessions[session_id]
+
+    if not shell.child or not shell.child.isalive():
+        # Clean up dead session
+        del _active_sessions[session_id]
+        return f"Session {session_id} is no longer active (process died)."
+
+    try:
+        history = shell.get_command_history()
+        
+        if not history:
+            return f"Session {session_id} has no command history."
+        
+        # Stitch together the full_output from all history entries
+        buffer_parts = []
+        for entry in history:
+            buffer_parts.append(entry.full_output)
+        
+        buffer = "".join(buffer_parts)
+        
+        if clean_for_markdown:
+            # Clean for markdown display
+            buffer = buffer.replace('\r\n', '\n').replace('\r', '\n')
+            # Remove excessive blank lines
+            buffer = re.sub(r'\n{3,}', '\n\n', buffer)
+        
+        return buffer
+
+    except Exception as e:
+        return f"Error retrieving buffer for session {session_id}: {str(e)}"
 
 
 if __name__ == "__main__":
