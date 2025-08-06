@@ -188,6 +188,7 @@ async def get_shell_buffer(session_id: str) -> str:
         del _active_sessions[session_id]
         return f"Session {session_id} is no longer active (process died)."
 
+    try:
         # Use read_nonblocking to get available output without affecting expect state
         buffer_content = ""
         
