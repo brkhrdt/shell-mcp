@@ -41,13 +41,9 @@ class InteractiveShell:
 
     class CommandHistoryEntry(NamedTuple):
         command: str
-        output: (
-            str  # This will now contain only the command output, not the command itself
-        )
-        full_output: (
-            str  # This will contain the complete output including prompt and command
-        )
-        timestamp: float  # Unix timestamp when command was executed
+        output: str
+        full_output: str
+        timestamp: float
 
     def start(self, timeout: float = 10):
         """Start the interactive shell process."""
