@@ -188,7 +188,23 @@ async def get_shell_buffer(session_id: str) -> str:
         return f"Session {session_id} is no longer active (process died)."
 
     try:
-        return shell.child.buffer
+        # Get the complete output from pexpect
+        # shell.child.buffer only contains recent unmatched output
+        # Use before + after to get more complete output, or check if there's a logfile
+        if hasattr(shell.child, 'logfile_read') and shell.child.logfile_read:
+            # If logging is enabled, that would have the full buffer
+            return "Logfile access not implemented"
+        else:
+            # Return the available buffer content
+            buffer_content = ""
+            if hasattr(shell.child, 'before') and shell.child.before:
+                buffer_content += shell.child.before.decode('utf-8', errors='replace')
+            if hasattr(shell.child, 'after') and shell.child.after:
+                buffer_content += shell.child.after.decode('utf-8', errors='replace')
+            if shell.child.buffer:
+                buffer_content += shell.child.buffer
+            
+            return buffer_content if buffer_content else "Buffer is empty"
 
     except Exception as e:
         return f"Error retrieving buffer for session {session_id}: {str(e)}"
