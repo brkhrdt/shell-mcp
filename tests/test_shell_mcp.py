@@ -217,6 +217,27 @@ async def test_python_command():
 
 
 @pytest.mark.asyncio
+async def test_python_multiline_command():
+    """Test running Python command via MCP."""
+    # Start a Python session
+    start_result = await start_shell_session(["python"], prompt_patterns=[r"\n>>>\s"])
+    session_id = start_result.split("Session ID: ")[1]
+
+    try:
+        # should auto add a \n to the end since it's missing
+        result = await run_shell_command(
+            session_id,
+            'for i in range(1, 6):\n    if i == 1: print("eins")\n    elif i == 2: print("zwei")\n    elif i == 3: print("drei")\n    elif i == 4: print("vier")\n    else: print("fünf")',
+        )
+
+        # Verify output contains expected result
+        assert "vier" in result
+
+    finally:
+        await close_shell_session(session_id, "exit()")
+
+
+@pytest.mark.asyncio
 async def test_multiple_active_sessions():
     """Test managing multiple active sessions simultaneously."""
     # Start multiple sessions
