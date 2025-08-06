@@ -201,7 +201,7 @@ async def test_tclsh_command():
 async def test_python_command():
     """Test running Python command via MCP."""
     # Start a Python session
-    start_result = await start_shell_session(["python"], prompt_patterns=[r"\n>>>\s"])
+    start_result = await start_shell_session(["python"])
     session_id = start_result.split("Session ID: ")[1]
 
     try:
