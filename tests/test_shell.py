@@ -4,7 +4,7 @@ from shell import InteractiveShell
 
 def test_pexpect_interactive_shell_start_and_close():
     """Test that shell can be started and closed properly."""
-    shell = InteractiveShell(["bash", "--norc", "-i"]) # Removed prompt_patterns
+    shell = InteractiveShell(["bash", "--norc", "-i"])  # Removed prompt_patterns
     shell.start()
 
     # Verify process is running
@@ -20,9 +20,7 @@ def test_pexpect_interactive_shell_start_and_close():
 
 def test_pexpect_interactive_shell_start_failure():
     """Test that shell properly handles failed process start."""
-    shell = InteractiveShell(
-        ["nonexistent_command_12345"]
-    ) # Removed prompt_patterns
+    shell = InteractiveShell(["nonexistent_command_12345"])  # Removed prompt_patterns
 
     with pytest.raises(RuntimeError, match="Could not start shell process"):
         shell.start()
@@ -30,7 +28,7 @@ def test_pexpect_interactive_shell_start_failure():
 
 def test_pexpect_interactive_shell_run_command():
     """Test running a simple command in the shell."""
-    shell = InteractiveShell(["bash", "--norc", "-i"]) # Removed prompt_patterns
+    shell = InteractiveShell(["bash", "--norc", "-i"])  # Removed prompt_patterns
     shell.start()
 
     try:
@@ -48,7 +46,7 @@ def test_pexpect_interactive_shell_run_command():
 
 def test_pexpect_interactive_shell_multiple_commands():
     """Test running multiple commands sequentially."""
-    shell = InteractiveShell(["bash", "--norc", "-i"]) # Removed prompt_patterns
+    shell = InteractiveShell(["bash", "--norc", "-i"])  # Removed prompt_patterns
     shell.start()
 
     try:
@@ -68,7 +66,7 @@ def test_pexpect_interactive_shell_with_working_directory():
     """Test shell with specific working directory."""
     shell = InteractiveShell(
         ["bash", "--norc", "-i"], cwd="/tmp"
-    ) # Removed prompt_patterns
+    )  # Removed prompt_patterns
     shell.start()
 
     try:
@@ -82,7 +80,7 @@ def test_pexpect_interactive_shell_with_working_directory():
 
 def test_pexpect_interactive_shell_error_handling():
     """Test error handling when shell is not started."""
-    shell = InteractiveShell(["bash", "--norc", "-i"]) # Removed prompt_patterns
+    shell = InteractiveShell(["bash", "--norc", "-i"])  # Removed prompt_patterns
 
     # Try to run command without starting shell
     with pytest.raises(RuntimeError, match="Shell not started or process has exited"):
@@ -91,7 +89,7 @@ def test_pexpect_interactive_shell_error_handling():
 
 def test_pexpect_interactive_shell_complex_command():
     """Test running a more complex command."""
-    shell = InteractiveShell(["bash", "--norc", "-i"]) # Removed prompt_patterns
+    shell = InteractiveShell(["bash", "--norc", "-i"])  # Removed prompt_patterns
     shell.start()
 
     try:
@@ -109,7 +107,7 @@ def test_pexpect_interactive_shell_complex_command():
 
 def test_tclsh_command():
     """Test running TCL command expr 2+3 which should result in 5."""
-    shell = InteractiveShell(["tclsh"]) # Removed prompt_patterns
+    shell = InteractiveShell(["tclsh"])  # Removed prompt_patterns
     shell.start()
 
     try:
@@ -126,7 +124,7 @@ def test_tclsh_command():
 
 def test_python_command():
     """Test running Python command 2+3 which should result in 5."""
-    shell = InteractiveShell(["python"]) # Removed prompt_patterns
+    shell = InteractiveShell(["python"])  # Removed prompt_patterns
     shell.start()
 
     try:
@@ -139,4 +137,3 @@ def test_python_command():
 
     finally:
         shell.close("exit()")
-

@@ -34,7 +34,8 @@ async def start_shell_session(
 
     try:
         shell = InteractiveShell(
-            shell_command=shell_command, cwd=cwd # prompt_patterns removed
+            shell_command=shell_command,
+            cwd=cwd,  # prompt_patterns removed
         )
 
         # Convert to async operation
@@ -202,13 +203,18 @@ async def get_shell_buffer(session_id: str) -> str:
             # that might still be in the child's buffer.
             # This is a best-effort attempt and might not capture everything.
             try:
-                initial_output = shell.child.read_nonblocking(size=65536, timeout=0.1).decode("utf-8", errors="replace")
-                return initial_output.strip() if initial_output else "Buffer is empty (no commands run yet)."
+                initial_output = shell.child.read_nonblocking(
+                    size=65536, timeout=0.1
+                ).decode("utf-8", errors="replace")
+                return (
+                    initial_output.strip()
+                    if initial_output
+                    else "Buffer is empty (no commands run yet)."
+                )
             except pexpect.TIMEOUT:
                 return "Buffer is empty (no commands run yet)."
             except pexpect.EOF:
                 return "Shell process terminated unexpectedly (EOF during buffer read)."
-
 
     except Exception as e:
         return f"Error retrieving buffer for session {session_id}: {str(e)}"
