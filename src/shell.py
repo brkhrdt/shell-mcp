@@ -19,6 +19,7 @@ class CommandHistoryEntry(NamedTuple):
 class InteractiveShell:
     COMMON_PROMPT_PATTERNS = [
         r"\r?\n[^\S\r\n]*[\$%#>]+\s*",  # Newline, optional leading whitespace, then $,%,#,> and a space
+        r"[^\S\r\n]*[\$%#>]+\s*",  # same as above but no newline because very firs
         # r"\r?\n[^\S\r\n]*[\$%#>]",  # Newline, optional leading whitespace, then $,%,#,> (no space)
         # r"[\$%#>]+ $",  # $,%,#> at end of string with a space
         # r"st\r?\n>>>\s",  # $,%,#> at end of string with a space
