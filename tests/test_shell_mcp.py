@@ -1,6 +1,8 @@
+import re
 import pytest
 import asyncio
 from shell_mcp import (
+    peek_shell_buffer,
     start_shell_session,
     run_shell_command,
     close_shell_session,
@@ -230,6 +232,36 @@ async def test_session_timeout():
         assert (
             "bash" in result_after_newline or "$" in result_after_newline
         )  # Prompt should be back
+
+    finally:
+        await close_shell_session(session_id)
+
+
+@pytest.mark.asyncio
+async def test_peek_running_command():
+    """Test command timeout handling."""
+    # Start a bash session
+    start_result = await start_shell_session(
+        ["bash", "--norc", "-i"]
+    )  # Removed prompt_patterns
+    session_id = start_result.split("Session ID: ")[1]
+
+    try:
+        # Run a command with very short timeout that should not complete
+        command = "sleep 1"
+        result = await run_shell_command(session_id, command, timeout=0.1)
+
+        # The shell no longer adds this specific message. It just returns what it read.
+        # We expect the output to contain the echoed command and potentially some initial output.
+        assert command in result  # The command should be in the partial output
+        assert len(result) < 50  # Expecting partial output, not the full 5-second wait
+
+        # Now, send a newline and check if the sleep command has finished
+        result_peek = await peek_shell_buffer(session_id, 1)
+        assert "bash" not in result  # new prompt not ready
+
+        result = await run_shell_command(session_id, "", timeout=1)
+        assert "bash" in result  # sleep done, prompt is ready now
 
     finally:
         await close_shell_session(session_id)
