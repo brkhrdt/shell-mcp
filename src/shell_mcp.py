@@ -72,7 +72,7 @@ async def get_active_sessions() -> str:
 
 
 @mcp.tool()
-async def run_shell_command(session_id: str, command: str, timeout: float = 10) -> str:
+async def run_shell_command(session_id: str, command: str, timeout: float = 1) -> str:
     """Run a command in an existing shell session.
 
     Args:

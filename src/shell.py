@@ -28,7 +28,7 @@ class InteractiveShell:
         # Initialize command history
         self.command_history: List[CommandHistoryEntry] = []
 
-    def start(self, timeout: float = 10):
+    def start(self, timeout: float = 1):
         """Start the interactive shell process."""
         # Convert command list to single command string for pexpect
         command = " ".join(self._shell_command_list)
@@ -36,7 +36,7 @@ class InteractiveShell:
 
         try:
             # Set a very short timeout for spawn itself, as we'll manage read timeouts later
-            self.child = pexpect.spawn(command, cwd=self.cwd, timeout=1)
+            self.child = pexpect.spawn(command, cwd=self.cwd, timeout=timeout)
 
             # Check if process started successfully
             if not self.child.isalive():
@@ -48,7 +48,7 @@ class InteractiveShell:
 
         log.info("Shell process started.")
 
-    def _read_until_timeout(self, timeout: float = 10) -> str:
+    def _read_until_timeout(self, timeout: float = 1) -> str:
         """Read all available output from the child process until a timeout occurs."""
         if not self.child:
             raise RuntimeError("Shell not started")
@@ -99,7 +99,7 @@ class InteractiveShell:
         log.debug(f"Finished reading. Total output length: {len(accumulated_output)}")
         return accumulated_output.strip()
 
-    def run_command(self, command: str, timeout: float = 10) -> str:
+    def run_command(self, command: str, timeout: float = 1) -> str:
         """Run a command and return the complete output after a timeout."""
         if not self.child or not self.child.isalive():
             raise RuntimeError("Shell not started or process has exited")
