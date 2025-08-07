@@ -1,6 +1,5 @@
 import pytest
 import asyncio
-import pexpect
 from src.shell_mcp import (
     start_shell_session,
     run_shell_command,
