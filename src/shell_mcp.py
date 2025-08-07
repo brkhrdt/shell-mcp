@@ -252,6 +252,39 @@ async def get_command_output(session_id: str) -> str:
         return f"Error retrieving buffer for session {session_id}: {str(e)}"
 
 
+@mcp.tool()
+async def peek_shell_buffer(session_id: str, n_lines: int = 10) -> str:
+    """
+    Get the last n lines of the current shell buffer, including any new output.
+
+    Args:
+        session_id: ID of the shell session
+        n_lines: Number of lines to peek from the end of the buffer
+
+    Returns:
+        The last n lines of the shell's current output buffer.
+    """
+    if session_id not in _active_sessions:
+        return f"Session {session_id} not found. Use get_active_sessions() to see available sessions."
+
+    shell = _active_sessions[session_id]
+
+    if not shell.child or not shell.child.isalive():
+        # Clean up dead session
+        del _active_sessions[session_id]
+        return f"Session {session_id} is no longer active (process died)."
+
+    try:
+        # Convert to async operation
+        loop = asyncio.get_event_loop()
+        peeked_output = await loop.run_in_executor(None, shell.peek_buffer, n_lines)
+        return peeked_output
+
+    except Exception as e:
+        return f"Error peeking buffer for session {session_id}: {str(e)}"
+
+
 if __name__ == "__main__":
     # Initialize and run the server
     mcp.run(transport="stdio")
+
