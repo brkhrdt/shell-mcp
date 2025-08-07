@@ -274,10 +274,10 @@ async def test_multiple_active_sessions():
 async def test_close_all_sessions():
     """Test closing all sessions at once."""
     # Start multiple sessions
-    session1_result = await start_shell_session(
+    await start_shell_session(
         ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
     )
-    session2_result = await start_shell_session(["tclsh"], prompt_patterns=[r"%"])
+    await start_shell_session(["tclsh"], prompt_patterns=[r"%"])
 
     # Verify sessions are active
     sessions_info = await get_active_sessions()
@@ -310,7 +310,7 @@ async def test_dead_session_cleanup():
 
     # Try to run a command - should detect dead session and clean up
     result = await run_shell_command(session_id, "echo test")
-    assert "is no longer active (process died)" in result
+    assert "is no longer active (process died)." in result
 
     # Verify session was cleaned up
     sessions_info = await get_active_sessions()
@@ -347,3 +347,4 @@ async def test_custom_exit_command():
     # Close with Python-specific exit command
     close_result = await close_shell_session(session_id, "exit()")
     assert "closed successfully" in close_result
+
