@@ -67,9 +67,13 @@ class InteractiveShell:
         # Wait for the initial prompt
         # For initial startup, we still want to raise an error if no prompt is found
         # as it indicates a fundamental issue with the shell starting.
-        output, matched_prompt, prompt_found = self._wait_for_prompt(initial_startup=True, timeout=timeout)
+        output, matched_prompt, prompt_found = self._wait_for_prompt(
+            initial_startup=True, timeout=timeout
+        )
         if not prompt_found:
-            raise TimeoutError(f"Timed out waiting for initial prompt after {timeout} seconds. Output: {output}")
+            raise TimeoutError(
+                f"Timed out waiting for initial prompt after {timeout} seconds. Output: {output}"
+            )
         log.info("Initial shell prompt detected.")
 
     def _wait_for_prompt(
@@ -117,8 +121,14 @@ class InteractiveShell:
             log.debug(f"Last output before timeout: {output_before_timeout}")
             if initial_startup:
                 # For initial startup, a timeout is still an error
-                raise TimeoutError(f"Timed out waiting for initial prompt after {timeout} seconds. Output: {output_before_timeout}")
-            return output_before_timeout.strip(), "", False # Return accumulated output, empty prompt, and False for prompt_found
+                raise TimeoutError(
+                    f"Timed out waiting for initial prompt after {timeout} seconds. Output: {output_before_timeout}"
+                )
+            return (
+                output_before_timeout.strip(),
+                "",
+                False,
+            )  # Return accumulated output, empty prompt, and False for prompt_found
 
         except pexpect.EOF:
             log.error("Shell process terminated unexpectedly")
@@ -128,7 +138,7 @@ class InteractiveShell:
             log.error(f"Exception was thrown: {e}")
             log.error("debug information:")
             log.error(str(self.child))
-            raise # Re-raise other exceptions
+            raise  # Re-raise other exceptions
 
     def run_command(self, command: str, timeout: float = 10) -> str:
         """Run a command and return the complete output. If a prompt is not found within timeout,
@@ -142,19 +152,26 @@ class InteractiveShell:
         self.child.sendline(command)
 
         # Wait for the prompt to reappear
-        command_output, matched_prompt, prompt_found = self._wait_for_prompt(timeout=timeout)
+        command_output, matched_prompt, prompt_found = self._wait_for_prompt(
+            timeout=timeout
+        )
 
         if not prompt_found:
             # If no prompt was found, the command might be incomplete or waiting for more input.
             # Return the accumulated output and indicate this state.
-            full_output = command_output + "\n[No prompt detected within timeout. Command might be incomplete or awaiting further input.]"
-            log.warning(f"Command '{command}' did not result in a prompt within {timeout}s. Partial output: {command_output}")
-            
+            full_output = (
+                command_output
+                + "\n[No prompt detected within timeout. Command might be incomplete or awaiting further input.]"
+            )
+            log.warning(
+                f"Command '{command}' did not result in a prompt within {timeout}s. Partial output: {command_output}"
+            )
+
             # Record in history, noting the incomplete state
             timestamp = time.time()
             history_entry = CommandHistoryEntry(
                 command=command,
-                output=command_output.strip(), # The output is whatever was received
+                output=command_output.strip(),  # The output is whatever was received
                 full_output=full_output,
                 timestamp=timestamp,
             )

@@ -1,7 +1,6 @@
 from typing import Dict, Optional, List
 import uuid
 import asyncio
-import re
 import pexpect
 from mcp.server.fastmcp import FastMCP
 from shell import InteractiveShell
@@ -163,7 +162,7 @@ async def close_all_sessions() -> str:
 
     summary = f"Closed {closed_count} sessions successfully."
     if errors:
-        summary += f"\nErrors:\n" + "\n".join(errors)
+        summary += "\nErrors:\n" + "\n".join(errors)
 
     return summary
 
@@ -191,33 +190,33 @@ async def get_shell_buffer(session_id: str) -> str:
     try:
         # Use read_nonblocking to get available output without affecting expect state
         buffer_content = ""
-        
+
         # First, get any existing buffer content
         if shell.child.buffer:
             buffer_content += shell.child.buffer
-        
+
         # Then try to read any additional available data
         try:
             # Read up to 64KB of available data without blocking
             additional_data = shell.child.read_nonblocking(size=65536, timeout=0)
             if additional_data:
-                buffer_content += additional_data.decode('utf-8', errors='replace')
+                buffer_content += additional_data.decode("utf-8", errors="replace")
         except pexpect.TIMEOUT:
             # No additional data available, that's fine
             pass
         except pexpect.EOF:
             # Process has ended
             buffer_content += "\n[Process ended]"
-        
+
         # Also include before/after if they exist (from previous expect operations)
-        if hasattr(shell.child, 'before') and shell.child.before:
-            before_content = shell.child.before.decode('utf-8', errors='replace')
+        if hasattr(shell.child, "before") and shell.child.before:
+            before_content = shell.child.before.decode("utf-8", errors="replace")
             buffer_content = before_content + buffer_content
-        
-        if hasattr(shell.child, 'after') and shell.child.after:
-            after_content = shell.child.after.decode('utf-8', errors='replace')
+
+        if hasattr(shell.child, "after") and shell.child.after:
+            after_content = shell.child.after.decode("utf-8", errors="replace")
             buffer_content = buffer_content + after_content
-        
+
         return buffer_content if buffer_content else "Buffer is empty"
 
     except Exception as e:

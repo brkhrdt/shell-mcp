@@ -1,6 +1,6 @@
 import pytest
 import asyncio
-from src.shell_mcp import (
+from shell_mcp import (
     start_shell_session,
     run_shell_command,
     close_shell_session,
@@ -129,10 +129,13 @@ async def test_python_multiline_command():
             session_id,
             'for i in range(1, 6):\n    if i == 1: print("eins")\n    elif i == 2: print("zwei")\n    elif i == 3: print("drei")\n    elif i == 4: print("vier")\n    else: print("fünf")',
         )
-        
+
         # Verify that it indicates no prompt was found (as it's waiting for more input)
-        assert "[No prompt detected within timeout. Command might be incomplete or awaiting further input.]" in result_part1
-        assert ">>>" not in result_part1 # No prompt should be present yet
+        assert (
+            "[No prompt detected within timeout. Command might be incomplete or awaiting further input.]"
+            in result_part1
+        )
+        assert ">>>" not in result_part1  # No prompt should be present yet
 
         # Send an empty line to execute the multiline command
         result_part2 = await run_shell_command(session_id, "")
@@ -143,7 +146,7 @@ async def test_python_multiline_command():
         assert "\ndrei" in result_part2
         assert "\nvier" in result_part2
         assert "\nfünf" in result_part2
-        assert ">>>" in result_part2 # Prompt should be back after execution
+        assert ">>>" in result_part2  # Prompt should be back after execution
 
     finally:
         await close_shell_session(session_id)
@@ -158,11 +161,11 @@ async def test_get_shell_buffer():
     try:
         # Run a command
         await run_shell_command(session_id, "echo buffer_test")
-        
+
         # Get buffer content
         buffer_content = await get_shell_buffer(session_id)
         assert "buffer_test" in buffer_content
-        
+
         # Run another command to ensure buffer updates
         await run_shell_command(session_id, "echo another_test")
         buffer_content = await get_shell_buffer(session_id)
@@ -186,7 +189,7 @@ async def test_get_command_output():
         # Get last command output
         last_output = await get_command_output(session_id)
         assert "first" in last_output
-        assert "echo first" in last_output # full_output includes command and prompt
+        assert "echo first" in last_output  # full_output includes command and prompt
 
         # Run another command
         output2 = await run_shell_command(session_id, "echo second")
@@ -215,14 +218,20 @@ async def test_session_timeout():
         result = await run_shell_command(session_id, "sleep 5", timeout=0.1)
 
         # Should indicate that no prompt was detected within timeout
-        assert "[No prompt detected within timeout. Command might be incomplete or awaiting further input.]" in result
-        assert "sleep 5" in result # The echoed command should be in the partial output
+        assert (
+            "[No prompt detected within timeout. Command might be incomplete or awaiting further input.]"
+            in result
+        )
+        assert "sleep 5" in result  # The echoed command should be in the partial output
 
         # Now, send a newline to complete the sleep command and get the prompt back
         result_after_newline = await run_shell_command(session_id, "")
-        assert "bash" in result_after_newline or "$" in result_after_newline # Prompt should be back
-        assert "[No prompt detected within timeout" not in result_after_newline # No timeout message
+        assert (
+            "bash" in result_after_newline or "$" in result_after_newline
+        )  # Prompt should be back
+        assert (
+            "[No prompt detected within timeout" not in result_after_newline
+        )  # No timeout message
 
     finally:
         await close_shell_session(session_id)
-
