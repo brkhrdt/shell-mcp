@@ -120,7 +120,7 @@ async def test_close_all_sessions():
 async def test_python_multiline_command():
     """Test running Python command via MCP."""
     # Start a Python session
-    start_result = await start_shell_session(["python3"]) # Removed prompt_patterns
+    start_result = await start_shell_session(["python3"])  # Removed prompt_patterns
     session_id = start_result.split("Session ID: ")[1]
 
     try:
@@ -207,7 +207,9 @@ async def test_get_command_output():
 async def test_session_timeout():
     """Test command timeout handling."""
     # Start a bash session
-    start_result = await start_shell_session(["bash", "--norc", "-i"]) # Removed prompt_patterns
+    start_result = await start_shell_session(
+        ["bash", "--norc", "-i"]
+    )  # Removed prompt_patterns
     session_id = start_result.split("Session ID: ")[1]
 
     try:
@@ -217,7 +219,7 @@ async def test_session_timeout():
         # The shell no longer adds this specific message. It just returns what it read.
         # We expect the output to contain the echoed command and potentially some initial output.
         assert "sleep 5" in result  # The echoed command should be in the partial output
-        assert len(result) < 50 # Expecting partial output, not the full 5-second wait
+        assert len(result) < 50  # Expecting partial output, not the full 5-second wait
 
         # Now, send a newline to complete the sleep command and get the prompt back
         result_after_newline = await run_shell_command(session_id, "")
@@ -227,4 +229,3 @@ async def test_session_timeout():
 
     finally:
         await close_shell_session(session_id)
-
