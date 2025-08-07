@@ -17,7 +17,7 @@ _active_sessions: Dict[str, InteractiveShell] = {}
 async def start_shell_session(
     shell_command: List[str],
     cwd: Optional[str] = None,
-    prompt_patterns: Optional[List[str]] = None,
+    # prompt_patterns: Optional[List[str]] = None, # Removed
     timeout: float = 10,
 ) -> str:
     """Start a new interactive shell session.
@@ -25,7 +25,6 @@ async def start_shell_session(
     Args:
         shell_command: List of command and arguments to start the shell (e.g., ["bash"], ["python3"], ["tclsh"])
         cwd: Optional working directory for the shell
-        prompt_patterns: Optional custom prompt patterns to recognize
         timeout: Timeout in seconds for shell operations
 
     Returns:
@@ -35,7 +34,7 @@ async def start_shell_session(
 
     try:
         shell = InteractiveShell(
-            shell_command=shell_command, cwd=cwd, prompt_patterns=prompt_patterns
+            shell_command=shell_command, cwd=cwd # prompt_patterns removed
         )
 
         # Convert to async operation
@@ -188,36 +187,28 @@ async def get_shell_buffer(session_id: str) -> str:
         return f"Session {session_id} is no longer active (process died)."
 
     try:
-        # Use read_nonblocking to get available output without affecting expect state
-        buffer_content = ""
+        # With the new timeout-based reading, the "buffer" concept changes.
+        # The run_command method already reads all available output up to timeout.
+        # So, the most relevant "buffer" is the output of the last command.
+        # If we need *all* unread data, it would require a direct read_nonblocking
+        # on shell.child, but that might interfere with future run_command calls.
+        # For now, let's return the last command's full output, or an empty string
+        # if no commands have been run.
+        last_command_entry = shell.get_last_command()
+        if last_command_entry:
+            return last_command_entry.full_output
+        else:
+            # If no commands have been run, try to read any initial output
+            # that might still be in the child's buffer.
+            # This is a best-effort attempt and might not capture everything.
+            try:
+                initial_output = shell.child.read_nonblocking(size=65536, timeout=0.1).decode("utf-8", errors="replace")
+                return initial_output.strip() if initial_output else "Buffer is empty (no commands run yet)."
+            except pexpect.TIMEOUT:
+                return "Buffer is empty (no commands run yet)."
+            except pexpect.EOF:
+                return "Shell process terminated unexpectedly (EOF during buffer read)."
 
-        # First, get any existing buffer content
-        if shell.child.buffer:
-            buffer_content += shell.child.buffer
-
-        # Then try to read any additional available data
-        try:
-            # Read up to 64KB of available data without blocking
-            additional_data = shell.child.read_nonblocking(size=65536, timeout=0)
-            if additional_data:
-                buffer_content += additional_data.decode("utf-8", errors="replace")
-        except pexpect.TIMEOUT:
-            # No additional data available, that's fine
-            pass
-        except pexpect.EOF:
-            # Process has ended
-            buffer_content += "\n[Process ended]"
-
-        # Also include before/after if they exist (from previous expect operations)
-        if hasattr(shell.child, "before") and shell.child.before:
-            before_content = shell.child.before.decode("utf-8", errors="replace")
-            buffer_content = before_content + buffer_content
-
-        if hasattr(shell.child, "after") and shell.child.after:
-            after_content = shell.child.after.decode("utf-8", errors="replace")
-            buffer_content = buffer_content + after_content
-
-        return buffer_content if buffer_content else "Buffer is empty"
 
     except Exception as e:
         return f"Error retrieving buffer for session {session_id}: {str(e)}"
