@@ -192,7 +192,7 @@ class InteractiveShell:
                 # Attempt graceful exit
                 self.child.sendline(exit_command)
                 # Wait for EOF, indicating the process has exited
-                self.child.expect(pexpect.EOF, timeout=5)
+                self.child.expect(pexpect.EOF, timeout=1)
             except pexpect.TIMEOUT:
                 log.warning(
                     "Shell did not exit gracefully within timeout, terminating."
