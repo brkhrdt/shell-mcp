@@ -287,4 +287,3 @@ async def peek_shell_buffer(session_id: str, n_lines: int = 10) -> str:
 if __name__ == "__main__":
     # Initialize and run the server
     mcp.run(transport="stdio")
-

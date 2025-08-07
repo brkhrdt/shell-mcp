@@ -65,14 +65,20 @@ class InteractiveShell:
 
         accumulated_output = ""
         start_time = time.time()
-        read_timeout = timeout if consume else 0.05  # Shorter timeout for non-consuming reads
+        read_timeout = (
+            timeout if consume else 0.05
+        )  # Shorter timeout for non-consuming reads
 
-        log.debug(f"Reading output for up to {read_timeout} seconds (consume={consume})...")
+        log.debug(
+            f"Reading output for up to {read_timeout} seconds (consume={consume})..."
+        )
 
         while True:
             try:
                 # Read up to 64KB of available data
-                data = self.child.read_nonblocking(size=65536, timeout=0.01) # Very short internal timeout
+                data = self.child.read_nonblocking(
+                    size=65536, timeout=0.01
+                )  # Very short internal timeout
                 if data:
                     accumulated_output += data.decode("utf-8", errors="replace")
                     log.debug(
@@ -126,7 +132,9 @@ class InteractiveShell:
 
         # Read output until timeout, consuming it
         command_output = self._read_available_output(timeout=timeout, consume=True)
-        self._current_buffer_content = command_output.strip() # Store the full output of this command
+        self._current_buffer_content = (
+            command_output.strip()
+        )  # Store the full output of this command
 
         # The full output is simply what was accumulated
         full_output = self._current_buffer_content
@@ -195,4 +203,3 @@ class InteractiveShell:
                 if self.child.isalive():
                     self.child.terminate()
         log.info("Shell closed")
-
