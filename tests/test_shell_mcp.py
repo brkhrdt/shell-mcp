@@ -1,7 +1,5 @@
 import pytest
-import asyncio
 import pytest_asyncio
-from unittest.mock import patch, MagicMock
 from shell_mcp import (
     start_shell_session,
     get_active_sessions,

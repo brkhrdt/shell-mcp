@@ -1,8 +1,6 @@
 import pexpect
 import re
 import logging as log
-import os
-import shutil
 from typing import Optional, List, NamedTuple
 import time
 
@@ -57,7 +55,7 @@ class InteractiveShell:
 
             # Check if process started successfully
             if not self.child.isalive():
-                raise RuntimeError(f"Failed to start shell process")
+                raise RuntimeError("Failed to start shell process")
 
         except Exception as e:
             log.error(f"Error starting shell process: {e}")
