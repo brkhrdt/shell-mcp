@@ -64,13 +64,17 @@ class InteractiveShell:
         log.info("Shell process started.")
 
         # Wait for the initial prompt
-        _, _ = self._wait_for_prompt(initial_startup=True, timeout=timeout)
+        # For initial startup, we still want to raise an error if no prompt is found
+        # as it indicates a fundamental issue with the shell starting.
+        output, matched_prompt, prompt_found = self._wait_for_prompt(initial_startup=True, timeout=timeout)
+        if not prompt_found:
+            raise TimeoutError(f"Timed out waiting for initial prompt after {timeout} seconds. Output: {output}")
         log.info("Initial shell prompt detected.")
 
     def _wait_for_prompt(
         self, initial_startup: bool = False, timeout: float = 10
-    ) -> tuple[str, str]:
-        """Wait for a prompt-like pattern to appear. Returns (output, matched_prompt)."""
+    ) -> tuple[str, str, bool]:
+        """Wait for a prompt-like pattern to appear. Returns (output_before_prompt, matched_prompt, prompt_found_status)."""
         if not self.child:
             raise RuntimeError("Shell not started")
 
@@ -99,23 +103,35 @@ class InteractiveShell:
             log.debug(f"child.before={self.child.before}")
             log.debug(f"child.after={self.child.after}")
 
-            return output.strip(), matched_prompt
+            return output.strip(), matched_prompt, True
 
-        # except pexpect.TIMEOUT:
-        #     log.error(f"Timeout waiting for prompt. Last output: {self.child.before}")
-        #     log.error(str(self.child))
-        #     raise TimeoutError(f"Timed out waiting for prompt after {timeout} seconds")
-        # except pexpect.EOF:
-        #     log.error("Shell process terminated unexpectedly")
-        #     log.error(str(self.child))
-        #     raise RuntimeError("Shell process terminated unexpectedly")
+        except pexpect.TIMEOUT:
+            log.warning(f"Timeout waiting for prompt after {timeout} seconds.")
+            # Get whatever output was accumulated before the timeout
+            output_before_timeout = (
+                self.child.before.decode("utf-8", errors="ignore")
+                if self.child.before
+                else ""
+            )
+            log.debug(f"Last output before timeout: {output_before_timeout}")
+            if initial_startup:
+                # For initial startup, a timeout is still an error
+                raise TimeoutError(f"Timed out waiting for initial prompt after {timeout} seconds. Output: {output_before_timeout}")
+            return output_before_timeout.strip(), "", False # Return accumulated output, empty prompt, and False for prompt_found
+
+        except pexpect.EOF:
+            log.error("Shell process terminated unexpectedly")
+            log.error(str(self.child))
+            raise RuntimeError("Shell process terminated unexpectedly")
         except Exception as e:
             log.error(f"Exception was thrown: {e}")
-            # log.error("debug information:")
-            # log.error(str(self.child))
+            log.error("debug information:")
+            log.error(str(self.child))
+            raise # Re-raise other exceptions
 
     def run_command(self, command: str, timeout: float = 10) -> str:
-        """Run a command and return the complete output including prompt and command."""
+        """Run a command and return the complete output. If a prompt is not found within timeout,
+        return the accumulated output and indicate that the command might be incomplete."""
         if not self.child or not self.child.isalive():
             raise RuntimeError("Shell not started or process has exited")
 
@@ -125,33 +141,50 @@ class InteractiveShell:
         self.child.sendline(command)
 
         # Wait for the prompt to reappear
-        command_output, matched_prompt = self._wait_for_prompt(timeout=timeout)
+        command_output, matched_prompt, prompt_found = self._wait_for_prompt(timeout=timeout)
 
-        # The full output includes everything: command output + the prompt
-        full_output = matched_prompt + command_output
-
-        # For history, separate the command from its actual output
-        # Remove the echoed command from the output for the history entry
-        command_echo_pattern = re.escape(command) + r"\r?\n"
-        match = re.search(command_echo_pattern, command_output)
-        if match and match.start() == 0:
-            cleaned_output = command_output[match.end() :]
+        if not prompt_found:
+            # If no prompt was found, the command might be incomplete or waiting for more input.
+            # Return the accumulated output and indicate this state.
+            full_output = command_output + "\n[No prompt detected within timeout. Command might be incomplete or awaiting further input.]"
+            log.warning(f"Command '{command}' did not result in a prompt within {timeout}s. Partial output: {command_output}")
+            
+            # Record in history, noting the incomplete state
+            timestamp = time.time()
+            history_entry = CommandHistoryEntry(
+                command=command,
+                output=command_output.strip(), # The output is whatever was received
+                full_output=full_output,
+                timestamp=timestamp,
+            )
+            self.command_history.append(history_entry)
+            return full_output
         else:
-            cleaned_output = command_output
+            # The full output includes everything: command output + the prompt
+            full_output = matched_prompt + command_output
 
-        # Record the command in history with separated command and output
-        timestamp = time.time()
-        history_entry = CommandHistoryEntry(
-            command=command,
-            output=cleaned_output.strip(),
-            full_output=full_output,
-            timestamp=timestamp,
-        )
-        self.command_history.append(history_entry)
+            # For history, separate the command from its actual output
+            # Remove the echoed command from the output for the history entry
+            command_echo_pattern = re.escape(command) + r"\r?\n"
+            match = re.search(command_echo_pattern, command_output)
+            if match and match.start() == 0:
+                cleaned_output = command_output[match.end() :]
+            else:
+                cleaned_output = command_output
 
-        # Return the complete output including prompt and command
-        log.debug(f"OUTPUT: {full_output}")
-        return full_output
+            # Record the command in history with separated command and output
+            timestamp = time.time()
+            history_entry = CommandHistoryEntry(
+                command=command,
+                output=cleaned_output.strip(),
+                full_output=full_output,
+                timestamp=timestamp,
+            )
+            self.command_history.append(history_entry)
+
+            # Return the complete output including prompt and command
+            log.debug(f"OUTPUT: {full_output}")
+            return full_output
 
     def get_command_history(self) -> List[CommandHistoryEntry]:
         """Get the complete command history in chronological order."""
