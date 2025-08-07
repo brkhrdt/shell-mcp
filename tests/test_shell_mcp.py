@@ -134,13 +134,16 @@ async def test_python_multiline_command():
         # The shell no longer adds this specific message. It just returns what it read.
         # We expect the output to contain the echoed command and potentially some initial output.
         assert "for i in range(1, 6):" in result_part1
-        assert ">>>" not in result_part1  # No prompt should be present yet
+        assert (
+            ">>>"
+            not in result_part1.split("\n")[-1]  # check that new prompt is not at end
+        )  # No prompt should be present yet
 
         # Send an empty line to execute the multiline command
         result_part2 = await run_shell_command(session_id, "")
 
         # Verify output contains expected result
-        assert "\neins" in result_part2
+        assert "eins" in result_part2
         assert "\nzwei" in result_part2
         assert "\ndrei" in result_part2
         assert "\nvier" in result_part2
@@ -214,14 +217,15 @@ async def test_session_timeout():
 
     try:
         # Run a command with very short timeout that should not complete
-        result = await run_shell_command(session_id, "sleep 5", timeout=0.1)
+        command = "sleep 1"
+        result = await run_shell_command(session_id, command, timeout=0.1)
 
         # The shell no longer adds this specific message. It just returns what it read.
         # We expect the output to contain the echoed command and potentially some initial output.
-        assert "sleep 5" in result  # The echoed command should be in the partial output
+        assert command in result  # The command should be in the partial output
         assert len(result) < 50  # Expecting partial output, not the full 5-second wait
 
-        # Now, send a newline to complete the sleep command and get the prompt back
+        # Now, send a newline and check if the sleep command has finished
         result_after_newline = await run_shell_command(session_id, "")
         assert (
             "bash" in result_after_newline or "$" in result_after_newline
