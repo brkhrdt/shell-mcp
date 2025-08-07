@@ -265,3 +265,6 @@ async def test_peek_running_command():
 
     finally:
         await close_shell_session(session_id)
+
+
+# TODO test full buffer history, should include all commands
