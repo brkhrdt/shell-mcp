@@ -17,7 +17,6 @@ _active_sessions: Dict[str, InteractiveShell] = {}
 async def start_shell_session(
     shell_command: List[str],
     cwd: Optional[str] = None,
-    # prompt_patterns: Optional[List[str]] = None, # Removed
     timeout: float = 10,
 ) -> str:
     """Start a new interactive shell session.
@@ -35,7 +34,7 @@ async def start_shell_session(
     try:
         shell = InteractiveShell(
             shell_command=shell_command,
-            cwd=cwd,  # prompt_patterns removed
+            cwd=cwd,
         )
 
         # Convert to async operation
