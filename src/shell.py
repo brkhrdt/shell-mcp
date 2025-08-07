@@ -1,5 +1,4 @@
 import pexpect
-import re
 import logging as log
 from typing import Optional, List, NamedTuple
 import time
@@ -65,7 +64,9 @@ class InteractiveShell:
                 data = self.child.read_nonblocking(size=65536, timeout=0.1)
                 if data:
                     accumulated_output += data.decode("utf-8", errors="replace")
-                    log.debug(f"Read {len(data)} bytes. Total: {len(accumulated_output)} bytes.")
+                    log.debug(
+                        f"Read {len(data)} bytes. Total: {len(accumulated_output)} bytes."
+                    )
                 else:
                     # No data immediately available, check if timeout elapsed
                     if time.time() - start_time > timeout:
@@ -77,9 +78,11 @@ class InteractiveShell:
             except pexpect.TIMEOUT:
                 # This timeout is from read_nonblocking, meaning no data was available within its internal timeout
                 if time.time() - start_time > timeout:
-                    log.debug(f"Timeout reached after {timeout} seconds (pexpect.TIMEOUT).")
+                    log.debug(
+                        f"Timeout reached after {timeout} seconds (pexpect.TIMEOUT)."
+                    )
                     break
-                time.sleep(0.01) # Still sleep to prevent busy-waiting
+                time.sleep(0.01)  # Still sleep to prevent busy-waiting
             except pexpect.EOF:
                 log.warning("Shell process terminated unexpectedly (EOF during read).")
                 accumulated_output += "\n[Shell process terminated unexpectedly]"
@@ -95,7 +98,6 @@ class InteractiveShell:
 
         log.debug(f"Finished reading. Total output length: {len(accumulated_output)}")
         return accumulated_output.strip()
-
 
     def run_command(self, command: str, timeout: float = 10) -> str:
         """Run a command and return the complete output after a timeout."""
@@ -117,7 +119,7 @@ class InteractiveShell:
         timestamp = time.time()
         history_entry = CommandHistoryEntry(
             command=command,
-            output=command_output, # The raw output
+            output=command_output,  # The raw output
             full_output=full_output,
             timestamp=timestamp,
         )
@@ -148,7 +150,9 @@ class InteractiveShell:
                 # Wait for EOF, indicating the process has exited
                 self.child.expect(pexpect.EOF, timeout=5)
             except pexpect.TIMEOUT:
-                log.warning("Shell did not exit gracefully within timeout, terminating.")
+                log.warning(
+                    "Shell did not exit gracefully within timeout, terminating."
+                )
                 self.child.terminate()
             except Exception as e:
                 log.error(f"Error during graceful shell exit: {e}")
