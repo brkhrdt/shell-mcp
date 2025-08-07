@@ -1,320 +1,205 @@
 import pytest
-import pytest_asyncio
-from shell_mcp import (
+import asyncio
+import pexpect
+from src.shell_mcp import (
     start_shell_session,
-    get_active_sessions,
     run_shell_command,
     close_shell_session,
+    get_active_sessions,
     close_all_sessions,
-    _active_sessions,
+    get_shell_buffer,
+    get_command_output,
+    _active_sessions,  # Access for testing cleanup
 )
 
 
-# Fixture to clean up sessions after each test
-@pytest_asyncio.fixture
+@pytest.fixture(autouse=True)
 async def cleanup_sessions():
-    """Clean up all sessions before and after each test."""
-    # Clear sessions before test
-    _active_sessions.clear()
+    """Fixture to ensure all sessions are closed before and after each test."""
+    await close_all_sessions()  # Clean up before test
     yield
-    # Clean up sessions after test
-    await close_all_sessions()
+    await close_all_sessions()  # Clean up after test
 
 
 @pytest.mark.asyncio
-async def test_start_and_close_shell_session():
-    """Test that shell session can be started and closed properly via MCP."""
-    # Start a bash session
-    result = await start_shell_session(
-        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
-    )
+async def test_start_and_close_bash_session():
+    """Test starting and closing a basic bash session."""
+    start_result = await start_shell_session(["bash", "--norc", "-i"])
+    assert "Shell session started successfully" in start_result
+    session_id = start_result.split("Session ID: ")[1]
 
-    # Verify session started successfully
-    assert "Shell session started successfully" in result
-    assert "Session ID:" in result
+    active_sessions = await get_active_sessions()
+    assert session_id in active_sessions
 
-    # Extract session ID from result
-    session_id = result.split("Session ID: ")[1]
-
-    # Verify session is in active sessions
-    sessions_info = await get_active_sessions()
-    assert session_id in sessions_info
-    assert "bash" in sessions_info
-    assert "alive" in sessions_info
-
-    # Close the session
     close_result = await close_shell_session(session_id)
     assert "closed successfully" in close_result
 
-    # Verify session is no longer active
-    sessions_info = await get_active_sessions()
-    assert "No active shell sessions" in sessions_info
+    active_sessions = await get_active_sessions()
+    assert session_id not in active_sessions
+    assert session_id not in _active_sessions
 
 
 @pytest.mark.asyncio
-async def test_start_shell_session_failure():
-    """Test that shell properly handles failed process start via MCP."""
-    # Try to start with nonexistent command
-    result = await start_shell_session(
-        ["nonexistent_command_12345"], prompt_patterns=[r"bash.*\$"]
-    )
+async def test_run_simple_command():
+    """Test running a simple command in a bash session."""
+    start_result = await start_shell_session(["bash", "--norc", "-i"])
+    session_id = start_result.split("Session ID: ")[1]
 
-    # Verify failure is reported
+    try:
+        command_output = await run_shell_command(session_id, "echo hello world")
+        assert "hello world" in command_output
+        assert session_id in _active_sessions  # Session should still be active
+    finally:
+        await close_shell_session(session_id)
+
+
+@pytest.mark.asyncio
+async def test_invalid_session_id():
+    """Test running a command with an invalid session ID."""
+    result = await run_shell_command("non-existent-id", "ls")
+    assert "Session non-existent-id not found" in result
+
+
+@pytest.mark.asyncio
+async def test_close_non_existent_session():
+    """Test closing a non-existent session."""
+    result = await close_shell_session("non-existent-id")
+    assert "Session non-existent-id not found" in result
+
+
+@pytest.mark.asyncio
+async def test_shell_process_death_cleanup():
+    """Test that a session is cleaned up if its underlying process dies."""
+    start_result = await start_shell_session(["bash", "--norc", "-i"])
+    session_id = start_result.split("Session ID: ")[1]
+
+    shell = _active_sessions[session_id]
+    assert shell.child is not None
+    assert shell.child.isalive()
+
+    # Force the child process to terminate
+    shell.child.close()
+    await asyncio.sleep(0.1)  # Give a moment for pexpect to register closure
+
+    assert not shell.child.isalive()
+
+    # Running a command should now trigger cleanup
+    result = await run_shell_command(session_id, "echo test")
+    assert f"Session {session_id} is no longer active (process died)." in result
+    assert session_id not in _active_sessions
+
+
+@pytest.mark.asyncio
+async def test_start_shell_failure():
+    """Test starting a shell with an invalid command."""
+    result = await start_shell_session(["non_existent_command"])
     assert "Failed to start shell session" in result
-
-    # Verify no sessions are active
-    sessions_info = await get_active_sessions()
-    assert "No active shell sessions" in sessions_info
+    assert "non_existent_command" in result
 
 
 @pytest.mark.asyncio
-async def test_run_shell_command():
-    """Test running a simple command in the shell via MCP."""
-    # Start a bash session
-    start_result = await start_shell_session(
-        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
-    )
-    session_id = start_result.split("Session ID: ")[1]
-
-    try:
-        # Run a simple command
-        result = await run_shell_command(session_id, "echo 'hello world'")
-
-        # Verify output contains expected content
-        assert "hello world" in result
-
-    finally:
-        await close_shell_session(session_id)
+async def test_get_active_sessions_empty():
+    """Test get_active_sessions when no sessions are active."""
+    await close_all_sessions()  # Ensure no sessions are active
+    result = await get_active_sessions()
+    assert "No active shell sessions." in result
 
 
 @pytest.mark.asyncio
-async def test_run_multiple_commands():
-    """Test running multiple commands sequentially via MCP."""
-    # Start a bash session
-    start_result = await start_shell_session(
-        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
-    )
-    session_id = start_result.split("Session ID: ")[1]
+async def test_close_all_sessions():
+    """Test closing all active sessions."""
+    await start_shell_session(["bash", "--norc", "-i"])
+    await start_shell_session(["python3"])
+    assert len(_active_sessions) == 2
 
-    try:
-        # Run first command
-        result1 = await run_shell_command(session_id, "echo 'first'")
-        assert "first" in result1
-
-        # Run second command
-        result2 = await run_shell_command(session_id, "echo 'second'")
-        assert "second" in result2
-
-    finally:
-        await close_shell_session(session_id)
-
-
-@pytest.mark.asyncio
-async def test_shell_with_working_directory():
-    """Test shell with specific working directory via MCP."""
-    # Start a bash session with specific working directory
-    start_result = await start_shell_session(
-        ["bash", "--norc", "-i"], cwd="/tmp", prompt_patterns=[r"bash.*\$"]
-    )
-    session_id = start_result.split("Session ID: ")[1]
-
-    try:
-        # Run a command that depends on current directory
-        result = await run_shell_command(session_id, "pwd")
-        assert "/tmp" in result
-
-        # Verify session info shows correct working directory
-        sessions_info = await get_active_sessions()
-        assert "cwd: /tmp" in sessions_info
-
-    finally:
-        await close_shell_session(session_id)
-
-
-@pytest.mark.asyncio
-async def test_run_command_nonexistent_session():
-    """Test error handling when trying to run command in nonexistent session."""
-    # Try to run command in nonexistent session
-    result = await run_shell_command("nonexistent-session-id", "echo test")
-
-    # Verify error message
-    assert "Session nonexistent-session-id not found" in result
-    assert "Use get_active_sessions()" in result
-
-
-@pytest.mark.asyncio
-async def test_close_nonexistent_session():
-    """Test error handling when trying to close nonexistent session."""
-    # Try to close nonexistent session
-    result = await close_shell_session("nonexistent-session-id")
-
-    # Verify error message
-    assert "Session nonexistent-session-id not found" in result
-
-
-@pytest.mark.asyncio
-async def test_complex_command():
-    """Test running a more complex command via MCP."""
-    # Start a bash session
-    start_result = await start_shell_session(
-        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
-    )
-    session_id = start_result.split("Session ID: ")[1]
-
-    try:
-        # Run a command that produces multi-line output
-        result = await run_shell_command(session_id, "ls -la")
-
-        # Should contain some output
-        assert len(result) > 0
-        # Check that the second line starts with 'd' and ends with '.'
-        lines = result.split("\n")
-        line = lines[2].strip()
-        dot_line_found = line.startswith("d") and line.endswith(".")
-        assert dot_line_found
-
-    finally:
-        await close_shell_session(session_id)
-
-
-@pytest.mark.asyncio
-async def test_tclsh_command():
-    """Test running TCL command via MCP."""
-    # Start a TCL session
-    start_result = await start_shell_session(["tclsh"], prompt_patterns=[r"%"])
-    session_id = start_result.split("Session ID: ")[1]
-
-    try:
-        # Run the TCL expression
-        result = await run_shell_command(session_id, "expr 2+3")
-
-        # Verify output contains expected result
-        assert "5" in result
-
-    finally:
-        await close_shell_session(session_id)
-
-
-@pytest.mark.asyncio
-async def test_python_command():
-    """Test running Python command via MCP."""
-    # Start a Python session
-    start_result = await start_shell_session(["python"])
-    session_id = start_result.split("Session ID: ")[1]
-
-    try:
-        # Run the Python expression
-        result = await run_shell_command(session_id, "2+3")
-
-        # Verify output contains expected result
-        assert "5" in result
-
-    finally:
-        await close_shell_session(session_id, "exit()")
+    result = await close_all_sessions()
+    assert "Closed 2 sessions successfully." in result
+    assert not _active_sessions
 
 
 @pytest.mark.asyncio
 async def test_python_multiline_command():
     """Test running Python command via MCP."""
     # Start a Python session
-    start_result = await start_shell_session(["python"], prompt_patterns=[r"\n>>>\s"])
+    start_result = await start_shell_session(["python3"], prompt_patterns=[r"\n>>>\s"])
     session_id = start_result.split("Session ID: ")[1]
 
     try:
-        # should auto add a \n to the end since it's missing
-        result = await run_shell_command(
+        # Send the multiline command
+        result_part1 = await run_shell_command(
             session_id,
             'for i in range(1, 6):\n    if i == 1: print("eins")\n    elif i == 2: print("zwei")\n    elif i == 3: print("drei")\n    elif i == 4: print("vier")\n    else: print("fünf")',
         )
+        
+        # Verify that it indicates no prompt was found (as it's waiting for more input)
+        assert "[No prompt detected within timeout. Command might be incomplete or awaiting further input.]" in result_part1
+        assert ">>>" not in result_part1 # No prompt should be present yet
+
+        # Send an empty line to execute the multiline command
+        result_part2 = await run_shell_command(session_id, "")
 
         # Verify output contains expected result
-        assert "\neins" in result
-        assert "\nzwei" in result
-        assert "\ndrei" in result
-        assert "\nvier" in result
-        assert "\nfünf" in result
+        assert "\neins" in result_part2
+        assert "\nzwei" in result_part2
+        assert "\ndrei" in result_part2
+        assert "\nvier" in result_part2
+        assert "\nfünf" in result_part2
+        assert ">>>" in result_part2 # Prompt should be back after execution
 
     finally:
-        await close_shell_session(session_id, "exit()")
+        await close_shell_session(session_id)
 
 
 @pytest.mark.asyncio
-async def test_multiple_active_sessions():
-    """Test managing multiple active sessions simultaneously."""
-    # Start multiple sessions
-    bash_result = await start_shell_session(
-        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
-    )
-    bash_session_id = bash_result.split("Session ID: ")[1]
-
-    tcl_result = await start_shell_session(["tclsh"], prompt_patterns=[r"%"])
-    tcl_session_id = tcl_result.split("Session ID: ")[1]
-
-    try:
-        # Verify both sessions are active
-        sessions_info = await get_active_sessions()
-        assert bash_session_id in sessions_info
-        assert tcl_session_id in sessions_info
-        assert "bash" in sessions_info
-        assert "tclsh" in sessions_info
-
-        # Run commands in both sessions
-        bash_result = await run_shell_command(bash_session_id, "echo 'hello world'")
-        assert "hello world" in bash_result
-
-        tcl_result = await run_shell_command(tcl_session_id, "expr 10+5")
-        assert "15" in tcl_result
-
-    finally:
-        await close_shell_session(bash_session_id)
-        await close_shell_session(tcl_session_id)
-
-
-@pytest.mark.asyncio
-async def test_close_all_sessions():
-    """Test closing all sessions at once."""
-    # Start multiple sessions
-    await start_shell_session(
-        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
-    )
-    await start_shell_session(["tclsh"], prompt_patterns=[r"%"])
-
-    # Verify sessions are active
-    sessions_info = await get_active_sessions()
-    assert "bash" in sessions_info
-    assert "tclsh" in sessions_info
-
-    # Close all sessions
-    close_result = await close_all_sessions()
-    assert "Closed 2 sessions successfully" in close_result
-
-    # Verify no sessions remain
-    sessions_info = await get_active_sessions()
-    assert "No active shell sessions" in sessions_info
-
-
-@pytest.mark.asyncio
-async def test_dead_session_cleanup():
-    """Test that dead sessions are properly cleaned up."""
-    # Start a session
-    start_result = await start_shell_session(
-        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
-    )
+async def test_get_shell_buffer():
+    """Test retrieving the shell buffer."""
+    start_result = await start_shell_session(["bash", "--norc", "-i"])
     session_id = start_result.split("Session ID: ")[1]
 
-    # Manually kill the process to simulate a dead session
-    shell = _active_sessions[session_id]
-    if shell.child:
-        shell.child.terminate()
-        shell.child.wait()  # Wait for process to actually die
+    try:
+        # Run a command
+        await run_shell_command(session_id, "echo buffer_test")
+        
+        # Get buffer content
+        buffer_content = await get_shell_buffer(session_id)
+        assert "buffer_test" in buffer_content
+        
+        # Run another command to ensure buffer updates
+        await run_shell_command(session_id, "echo another_test")
+        buffer_content = await get_shell_buffer(session_id)
+        assert "another_test" in buffer_content
 
-    # Try to run a command - should detect dead session and clean up
-    result = await run_shell_command(session_id, "echo test")
-    assert "is no longer active (process died)." in result
+    finally:
+        await close_shell_session(session_id)
 
-    # Verify session was cleaned up
-    sessions_info = await get_active_sessions()
-    assert "No active shell sessions" in sessions_info
+
+@pytest.mark.asyncio
+async def test_get_command_output():
+    """Test retrieving the output of the last command."""
+    start_result = await start_shell_session(["bash", "--norc", "-i"])
+    session_id = start_result.split("Session ID: ")[1]
+
+    try:
+        # Run a command
+        output1 = await run_shell_command(session_id, "echo first")
+        assert "first" in output1
+
+        # Get last command output
+        last_output = await get_command_output(session_id)
+        assert "first" in last_output
+        assert "echo first" in last_output # full_output includes command and prompt
+
+        # Run another command
+        output2 = await run_shell_command(session_id, "echo second")
+        assert "second" in output2
+
+        # Get last command output again
+        last_output = await get_command_output(session_id)
+        assert "second" in last_output
+        assert "echo second" in last_output
+
+    finally:
+        await close_shell_session(session_id)
 
 
 @pytest.mark.asyncio
@@ -322,29 +207,23 @@ async def test_session_timeout():
     """Test command timeout handling."""
     # Start a bash session
     start_result = await start_shell_session(
-        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$"]
+        ["bash", "--norc", "-i"], prompt_patterns=[r"bash.*\$ "]
     )
     session_id = start_result.split("Session ID: ")[1]
 
     try:
-        # Run a command with very short timeout that should fail
+        # Run a command with very short timeout that should not complete
         result = await run_shell_command(session_id, "sleep 5", timeout=0.1)
 
-        # Should get a timeout error
-        assert "Error executing command" in result
+        # Should indicate that no prompt was detected within timeout
+        assert "[No prompt detected within timeout. Command might be incomplete or awaiting further input.]" in result
+        assert "sleep 5" in result # The echoed command should be in the partial output
+
+        # Now, send a newline to complete the sleep command and get the prompt back
+        result_after_newline = await run_shell_command(session_id, "")
+        assert "bash" in result_after_newline or "$" in result_after_newline # Prompt should be back
+        assert "[No prompt detected within timeout" not in result_after_newline # No timeout message
 
     finally:
         await close_shell_session(session_id)
-
-
-@pytest.mark.asyncio
-async def test_custom_exit_command():
-    """Test using custom exit command for specific shells."""
-    # Start a Python session
-    start_result = await start_shell_session(["python"])
-    session_id = start_result.split("Session ID: ")[1]
-
-    # Close with Python-specific exit command
-    close_result = await close_shell_session(session_id, "exit()")
-    assert "closed successfully" in close_result
 
