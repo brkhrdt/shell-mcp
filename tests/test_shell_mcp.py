@@ -8,8 +8,6 @@ from shell_mcp import (
     close_shell_session,
     get_active_sessions,
     close_all_sessions,
-    get_shell_buffer,
-    get_command_output,
     _active_sessions,  # Access for testing cleanup
 )
 
@@ -151,58 +149,6 @@ async def test_python_multiline_command():
         assert "\nvier" in result_part2
         assert "\nfünf" in result_part2
         assert ">>>" in result_part2  # Prompt should be back after execution
-
-    finally:
-        await close_shell_session(session_id)
-
-
-@pytest.mark.asyncio
-async def test_get_shell_buffer():
-    """Test retrieving the shell buffer."""
-    start_result = await start_shell_session(["bash", "--norc", "-i"])
-    session_id = start_result.split("Session ID: ")[1]
-
-    try:
-        # Run a command
-        await run_shell_command(session_id, "echo buffer_test")
-
-        # Get buffer content
-        buffer_content = await get_shell_buffer(session_id)
-        assert "buffer_test" in buffer_content
-
-        # Run another command to ensure buffer updates
-        await run_shell_command(session_id, "echo another_test")
-        buffer_content = await get_shell_buffer(session_id)
-        assert "another_test" in buffer_content
-
-    finally:
-        await close_shell_session(session_id)
-
-
-@pytest.mark.asyncio
-async def test_get_command_output():
-    """Test retrieving the output of the last command."""
-    start_result = await start_shell_session(["bash", "--norc", "-i"])
-    session_id = start_result.split("Session ID: ")[1]
-
-    try:
-        # Run a command
-        output1 = await run_shell_command(session_id, "echo first")
-        assert "first" in output1
-
-        # Get last command output
-        last_output = await get_command_output(session_id)
-        assert "first" in last_output
-        assert "echo first" in last_output  # full_output includes command and prompt
-
-        # Run another command
-        output2 = await run_shell_command(session_id, "echo second")
-        assert "second" in output2
-
-        # Get last command output again
-        last_output = await get_command_output(session_id)
-        assert "second" in last_output
-        assert "echo second" in last_output
 
     finally:
         await close_shell_session(session_id)

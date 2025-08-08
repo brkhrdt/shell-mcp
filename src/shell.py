@@ -8,13 +8,6 @@ import time
 log.basicConfig(level=log.DEBUG, format="%(asctime)s][SHELL]%(levelname)s- %(message)s")
 
 
-class CommandHistoryEntry(NamedTuple):
-    command: str
-    output: str
-    full_output: str
-    timestamp: float
-
-
 class InteractiveShell:
     def __init__(
         self,
@@ -26,7 +19,6 @@ class InteractiveShell:
         self.child: Optional[pexpect.spawn] = None
 
         # Initialize command history
-        self.command_history: List[CommandHistoryEntry] = []
         # Buffer to hold current output that hasn't been "consumed" by a command
         self._current_buffer_content: str = ""
 
@@ -139,16 +131,6 @@ class InteractiveShell:
         # The full output is simply what was accumulated
         full_output = self._current_buffer_content
 
-        # Record the command in history
-        timestamp = time.time()
-        history_entry = CommandHistoryEntry(
-            command=command,
-            output=command_output,  # The raw output
-            full_output=full_output,
-            timestamp=timestamp,
-        )
-        self.command_history.append(history_entry)
-
         log.debug(f"OUTPUT: {full_output}")
         return full_output
 
@@ -171,18 +153,6 @@ class InteractiveShell:
             return "\n".join(lines)
         else:
             return "\n".join(lines[-n_lines:])
-
-    def get_command_history(self) -> List[CommandHistoryEntry]:
-        """Get the complete command history in chronological order."""
-        return self.command_history.copy()
-
-    def get_last_command(self) -> Optional[CommandHistoryEntry]:
-        """Get the most recently executed command and its output."""
-        return self.command_history[-1] if self.command_history else None
-
-    def clear_history(self) -> None:
-        """Clear the command history."""
-        self.command_history.clear()
 
     def close(self, exit_command: str = "exit"):
         """Close the shell process."""
