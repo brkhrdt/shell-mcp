@@ -1,6 +1,6 @@
 import pexpect
 import logging as log
-from typing import Optional, List, NamedTuple
+from typing import Optional, List
 import time
 
 
@@ -18,9 +18,8 @@ class InteractiveShell:
         self.cwd = cwd
         self.child: Optional[pexpect.spawn] = None
 
-        # Initialize command history
-        # Buffer to hold current output that hasn't been "consumed" by a command
-        self._current_buffer_content: str = ""
+        # Buffer to hold ALL output from the shell session
+        self._full_session_buffer: str = ""
 
     def start(self, timeout: float = 1):
         """Start the interactive shell process."""
@@ -38,7 +37,7 @@ class InteractiveShell:
 
             # Read any initial prompt/output
             initial_output = self._read_available_output(timeout=0.1)
-            self._current_buffer_content += initial_output
+            self._full_session_buffer += initial_output # Append to the full buffer
 
         except Exception as e:
             log.error(f"Error starting shell process: {e}")
@@ -72,7 +71,10 @@ class InteractiveShell:
                     size=65536, timeout=0.01
                 )  # Very short internal timeout
                 if data:
-                    accumulated_output += data.decode("utf-8", errors="replace")
+                    decoded_data = data.decode("utf-8", errors="replace")
+                    accumulated_output += decoded_data
+                    if consume: # Only append to full buffer if consuming
+                        self._full_session_buffer += decoded_data
                     log.debug(
                         f"Read {len(data)} bytes. Total: {len(accumulated_output)} bytes."
                     )
@@ -94,11 +96,17 @@ class InteractiveShell:
                 time.sleep(0.01)  # Still sleep to prevent busy-waiting
             except pexpect.EOF:
                 log.warning("Shell process terminated unexpectedly (EOF during read).")
-                accumulated_output += "\n[Shell process terminated unexpectedly]"
+                eof_message = "\n[Shell process terminated unexpectedly]"
+                accumulated_output += eof_message
+                if consume: # Only append to full buffer if consuming
+                    self._full_session_buffer += eof_message
                 break
             except Exception as e:
                 log.error(f"Error during output reading: {e}")
-                accumulated_output += f"\n[Error reading output: {e}]"
+                error_message = f"\n[Error reading output: {e}]"
+                accumulated_output += error_message
+                if consume: # Only append to full buffer if consuming
+                    self._full_session_buffer += error_message
                 break
 
             if time.time() - start_time > read_timeout:
@@ -115,24 +123,17 @@ class InteractiveShell:
 
         log.info(f"Running command: '{command}'")
 
-        # Clear the current buffer content before sending a new command
-        # This ensures _current_buffer_content only holds output relevant to the *last* command
-        self._current_buffer_content = ""
+        # Append the command itself to the buffer for a complete history
+        self._full_session_buffer += command + "\n"
 
         # Send command
         self.child.sendline(command)
 
-        # Read output until timeout, consuming it
+        # Read output until timeout, consuming it. The output is automatically added to _full_session_buffer
         command_output = self._read_available_output(timeout=timeout, consume=True)
-        self._current_buffer_content = (
-            command_output.strip()
-        )  # Store the full output of this command
 
-        # The full output is simply what was accumulated
-        full_output = self._current_buffer_content
-
-        log.debug(f"OUTPUT: {full_output}")
-        return full_output
+        # The full output for this specific command is what was just read
+        return command_output.strip()
 
     def peek_buffer(self, n_lines: int = 10) -> str:
         """
@@ -141,14 +142,14 @@ class InteractiveShell:
         if not self.child or not self.child.isalive():
             return "[Shell not active]"
 
-        # Read any new data that might have appeared since the last operation, without consuming it
-        new_data = self._read_available_output(timeout=0.05, consume=False)
-        self._current_buffer_content += new_data.strip()
+        # Read any new data that might have appeared since the last operation.
+        # This data will be automatically appended to _full_session_buffer by _read_available_output
+        self._read_available_output(timeout=0.05, consume=True)
 
-        if not self._current_buffer_content:
+        if not self._full_session_buffer:
             return "[Buffer is empty]"
 
-        lines = self._current_buffer_content.splitlines()
+        lines = self._full_session_buffer.splitlines()
         if len(lines) <= n_lines:
             return "\n".join(lines)
         else:
@@ -163,6 +164,8 @@ class InteractiveShell:
                 self.child.sendline(exit_command)
                 # Wait for EOF, indicating the process has exited
                 self.child.expect(pexpect.EOF, timeout=1)
+                # Read any remaining output before closing
+                self._read_available_output(timeout=0.1, consume=True)
             except pexpect.TIMEOUT:
                 log.warning(
                     "Shell did not exit gracefully within timeout, terminating."
@@ -173,3 +176,4 @@ class InteractiveShell:
                 if self.child.isalive():
                     self.child.terminate()
         log.info("Shell closed")
+
