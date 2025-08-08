@@ -10,7 +10,7 @@ log.basicConfig(level=log.DEBUG, format="%(asctime)s][SHELL]%(levelname)s- %(mes
 
 # ANSI escape code pattern (from https://stackoverflow.com/questions/14693701/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python)
 # This regex matches common ANSI escape sequences.
-ANSI_ESCAPE_PATTERN = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+ANSI_ESCAPE_PATTERN = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
 class InteractiveShell:
@@ -78,7 +78,7 @@ class InteractiveShell:
                 if data:
                     decoded_data = data.decode("utf-8", errors="replace")
                     # Strip ANSI escape codes from the decoded data
-                    cleaned_data = ANSI_ESCAPE_PATTERN.sub('', decoded_data)
+                    cleaned_data = ANSI_ESCAPE_PATTERN.sub("", decoded_data)
 
                     accumulated_output += cleaned_data
                     if consume:  # Only append to full buffer if consuming
@@ -106,7 +106,7 @@ class InteractiveShell:
                 log.warning("Shell process terminated unexpectedly (EOF during read).")
                 eof_message = "\n[Shell process terminated unexpectedly]"
                 # Clean EOF message as well
-                cleaned_eof_message = ANSI_ESCAPE_PATTERN.sub('', eof_message)
+                cleaned_eof_message = ANSI_ESCAPE_PATTERN.sub("", eof_message)
                 accumulated_output += cleaned_eof_message
                 if consume:  # Only append to full buffer if consuming
                     self._full_session_buffer += cleaned_eof_message
@@ -115,7 +115,7 @@ class InteractiveShell:
                 log.error(f"Error during output reading: {e}")
                 error_message = f"\n[Error reading output: {e}]"
                 # Clean error message as well
-                cleaned_error_message = ANSI_ESCAPE_PATTERN.sub('', error_message)
+                cleaned_error_message = ANSI_ESCAPE_PATTERN.sub("", error_message)
                 accumulated_output += cleaned_error_message
                 if consume:  # Only append to full buffer if consuming
                     self._full_session_buffer += cleaned_error_message
@@ -185,4 +185,3 @@ class InteractiveShell:
                 if self.child.isalive():
                     self.child.terminate()
         log.info("Shell closed")
-
