@@ -10,10 +10,10 @@ from shell_mcp import (
     close_all_sessions,
     _active_sessions,  # Access for testing cleanup
 )
-import pytest_asyncio # Added this import
+import pytest_asyncio  # Added this import
 
 
-@pytest_asyncio.fixture(autouse=True) # Changed this line
+@pytest_asyncio.fixture(autouse=True)  # Changed this line
 async def cleanup_sessions():
     """Fixture to ensure all sessions are closed before and after each test."""
     await close_all_sessions()  # Clean up before test
