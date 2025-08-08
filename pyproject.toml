@@ -25,5 +25,4 @@ markers = [
 addopts = [
     "-m", "not integration", # This ensures integration tests are skipped by default
     "--strict-markers",      # (Optional but recommended) Fails if an unregistered mark is used
-    "--log-cli-level=DEBUG",
 ]
