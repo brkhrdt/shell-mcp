@@ -78,7 +78,9 @@ class InteractiveShell:
                 if data:
                     decoded_data = data.decode("utf-8", errors="replace")
                     # Strip ANSI escape codes from the decoded data
-                    cleaned_data = ANSI_ESCAPE_PATTERN.sub("", decoded_data)
+                    cleaned_data = ANSI_ESCAPE_PATTERN.sub("", decoded_data).replace(
+                        "\r", ""
+                    )
 
                     accumulated_output += cleaned_data
                     if consume:  # Only append to full buffer if consuming
@@ -106,7 +108,9 @@ class InteractiveShell:
                 log.warning("Shell process terminated unexpectedly (EOF during read).")
                 eof_message = "\n[Shell process terminated unexpectedly]"
                 # Clean EOF message as well
-                cleaned_eof_message = ANSI_ESCAPE_PATTERN.sub("", eof_message)
+                cleaned_eof_message = ANSI_ESCAPE_PATTERN.sub("", eof_message).replace(
+                    "\r", ""
+                )
                 accumulated_output += cleaned_eof_message
                 if consume:  # Only append to full buffer if consuming
                     self._full_session_buffer += cleaned_eof_message
@@ -115,7 +119,9 @@ class InteractiveShell:
                 log.error(f"Error during output reading: {e}")
                 error_message = f"\n[Error reading output: {e}]"
                 # Clean error message as well
-                cleaned_error_message = ANSI_ESCAPE_PATTERN.sub("", error_message)
+                cleaned_error_message = ANSI_ESCAPE_PATTERN.sub(
+                    "", error_message
+                ).replace("\r", "")
                 accumulated_output += cleaned_error_message
                 if consume:  # Only append to full buffer if consuming
                     self._full_session_buffer += cleaned_error_message
