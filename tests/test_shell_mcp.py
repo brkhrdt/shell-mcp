@@ -1,4 +1,3 @@
-import re
 import pytest
 import asyncio
 from shell_mcp import (
