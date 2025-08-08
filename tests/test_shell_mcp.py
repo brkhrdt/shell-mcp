@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+import logging
 from shell_mcp import (
     peek_shell_buffer,
     start_shell_session,
@@ -228,6 +229,7 @@ async def test_full_buffer_history():
         full_history = await peek_shell_buffer(
             session_id, n_lines=100
         )  # Get enough lines to see everything
+        logging.debug(repr(full_history))
 
         # Assert that both commands and their outputs are in the history
         assert "sleep 1" in full_history

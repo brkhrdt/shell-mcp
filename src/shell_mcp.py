@@ -1,7 +1,6 @@
 from typing import Dict, Optional, List
 import uuid
 import asyncio
-import pexpect
 from mcp.server.fastmcp import FastMCP
 from shell import InteractiveShell
 
