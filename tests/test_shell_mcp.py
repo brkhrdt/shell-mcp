@@ -225,7 +225,9 @@ async def test_full_buffer_history():
         await run_shell_command(session_id, "echo test")
 
         # Peek the buffer to get the full history
-        full_history = await peek_shell_buffer(session_id, n_lines=100) # Get enough lines to see everything
+        full_history = await peek_shell_buffer(
+            session_id, n_lines=100
+        )  # Get enough lines to see everything
 
         # Assert that both commands and their outputs are in the history
         assert "sleep 1" in full_history
@@ -259,14 +261,15 @@ async def test_full_buffer_history():
         # We'll search a reasonable window after 'test'.
         prompt_found_after_test = False
         search_start = test_index + len("test")
-        search_end = min(search_start + 50, len(full_history)) # Search within 50 chars after 'test'
+        search_end = min(
+            search_start + 50, len(full_history)
+        )  # Search within 50 chars after 'test'
 
         substring_after_test = full_history[search_start:search_end]
         if "\n$" in substring_after_test or "\n#" in substring_after_test:
             prompt_found_after_test = True
-        
+
         assert prompt_found_after_test, "Prompt not found after 'test' in full history"
 
     finally:
         await close_shell_session(session_id)
-
