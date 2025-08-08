@@ -202,7 +202,7 @@ async def test_peek_running_command():
         assert len(result) < 50  # Expecting partial output, not the full 5-second wait
 
         # Now, send a newline and check if the sleep command has finished
-        await peek_shell_buffer(session_id, 1) # Removed assignment to result_peek
+        await peek_shell_buffer(session_id, 1)  # Removed assignment to result_peek
         assert "bash" not in result  # new prompt not ready
 
         result = await run_shell_command(session_id, "", timeout=1)
