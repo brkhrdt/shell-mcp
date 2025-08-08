@@ -123,9 +123,6 @@ class InteractiveShell:
 
         log.info(f"Running command: '{command}'")
 
-        # Append the command itself to the buffer for a complete history
-        self._full_session_buffer += command + "\n"
-
         # Send command
         self.child.sendline(command)
 
