@@ -37,7 +37,7 @@ class InteractiveShell:
 
             # Read any initial prompt/output
             initial_output = self._read_available_output(timeout=0.1)
-            self._full_session_buffer += initial_output # Append to the full buffer
+            self._full_session_buffer += initial_output  # Append to the full buffer
 
         except Exception as e:
             log.error(f"Error starting shell process: {e}")
@@ -73,7 +73,7 @@ class InteractiveShell:
                 if data:
                     decoded_data = data.decode("utf-8", errors="replace")
                     accumulated_output += decoded_data
-                    if consume: # Only append to full buffer if consuming
+                    if consume:  # Only append to full buffer if consuming
                         self._full_session_buffer += decoded_data
                     log.debug(
                         f"Read {len(data)} bytes. Total: {len(accumulated_output)} bytes."
@@ -98,14 +98,14 @@ class InteractiveShell:
                 log.warning("Shell process terminated unexpectedly (EOF during read).")
                 eof_message = "\n[Shell process terminated unexpectedly]"
                 accumulated_output += eof_message
-                if consume: # Only append to full buffer if consuming
+                if consume:  # Only append to full buffer if consuming
                     self._full_session_buffer += eof_message
                 break
             except Exception as e:
                 log.error(f"Error during output reading: {e}")
                 error_message = f"\n[Error reading output: {e}]"
                 accumulated_output += error_message
-                if consume: # Only append to full buffer if consuming
+                if consume:  # Only append to full buffer if consuming
                     self._full_session_buffer += error_message
                 break
 
@@ -176,4 +176,3 @@ class InteractiveShell:
                 if self.child.isalive():
                     self.child.terminate()
         log.info("Shell closed")
-
