@@ -2,10 +2,15 @@ import pexpect
 import logging as log
 from typing import Optional, List
 import time
+import re
 
 
 # Configure logging for better debugging
 log.basicConfig(level=log.DEBUG, format="%(asctime)s][SHELL]%(levelname)s- %(message)s")
+
+# ANSI escape code pattern (from https://stackoverflow.com/questions/14693701/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python)
+# This regex matches common ANSI escape sequences.
+ANSI_ESCAPE_PATTERN = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
 class InteractiveShell:
@@ -72,11 +77,14 @@ class InteractiveShell:
                 )  # Very short internal timeout
                 if data:
                     decoded_data = data.decode("utf-8", errors="replace")
-                    accumulated_output += decoded_data
+                    # Strip ANSI escape codes from the decoded data
+                    cleaned_data = ANSI_ESCAPE_PATTERN.sub('', decoded_data)
+
+                    accumulated_output += cleaned_data
                     if consume:  # Only append to full buffer if consuming
-                        self._full_session_buffer += decoded_data
+                        self._full_session_buffer += cleaned_data
                     log.debug(
-                        f"Read {len(data)} bytes. Total: {len(accumulated_output)} bytes."
+                        f"Read {len(data)} bytes. Cleaned: {len(cleaned_data)} bytes. Total: {len(accumulated_output)} bytes."
                     )
                 else:
                     # No data immediately available, check if timeout elapsed
@@ -97,16 +105,20 @@ class InteractiveShell:
             except pexpect.EOF:
                 log.warning("Shell process terminated unexpectedly (EOF during read).")
                 eof_message = "\n[Shell process terminated unexpectedly]"
-                accumulated_output += eof_message
+                # Clean EOF message as well
+                cleaned_eof_message = ANSI_ESCAPE_PATTERN.sub('', eof_message)
+                accumulated_output += cleaned_eof_message
                 if consume:  # Only append to full buffer if consuming
-                    self._full_session_buffer += eof_message
+                    self._full_session_buffer += cleaned_eof_message
                 break
             except Exception as e:
                 log.error(f"Error during output reading: {e}")
                 error_message = f"\n[Error reading output: {e}]"
-                accumulated_output += error_message
+                # Clean error message as well
+                cleaned_error_message = ANSI_ESCAPE_PATTERN.sub('', error_message)
+                accumulated_output += cleaned_error_message
                 if consume:  # Only append to full buffer if consuming
-                    self._full_session_buffer += error_message
+                    self._full_session_buffer += cleaned_error_message
                 break
 
             if time.time() - start_time > read_timeout:
@@ -173,3 +185,4 @@ class InteractiveShell:
                 if self.child.isalive():
                     self.child.terminate()
         log.info("Shell closed")
+
