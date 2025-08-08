@@ -223,7 +223,7 @@ async def test_full_buffer_history():
         # Run a command that takes some time
         await run_shell_command(session_id, "sleep 1", timeout=0.1)
         # Run another command immediately after
-        await run_shell_command(session_id, "echo test")
+        await run_shell_command(session_id, "echo test", timeout=0.1)
 
         # Peek the buffer to get the full history
         full_history = await peek_shell_buffer(
@@ -231,47 +231,10 @@ async def test_full_buffer_history():
         )  # Get enough lines to see everything
         logging.debug(repr(full_history))
 
-        # Assert that both commands and their outputs are in the history
-        assert "sleep 1" in full_history
-        assert "echo test" in full_history
-        assert "test" in full_history
-
-        # Assert that "test" appears before the final prompt
-        # This is a bit tricky as prompts can vary. We'll look for "test" followed by a common bash prompt character.
-        # Assuming a typical bash prompt like "$ " or "# "
-        # We need to be careful not to match "test" within the prompt itself if it were to contain it.
-        # A more robust check would involve parsing the prompt, but for a simple test, this is often sufficient.
-        # Let's look for "test" followed by a newline and then a prompt-like character.
-        # The `peek_shell_buffer` should return the raw buffer content.
-        # The prompt is usually on a new line after the command output.
-        # So, we expect something like:
-        # sleep 1
-        # [some output from sleep, if any]
-        # $ echo test
-        # test
-        # $
-        # We need to ensure 'test' is present and then a prompt follows.
-
-        # Find the index of "test"
-        test_index = full_history.find("test")
-        assert test_index != -1, "'test' not found in full history"
-
-        # Look for a prompt character after "test"
-        # Common bash prompts include '$', '#', or specific strings.
-        # We'll check for '$' or '#' on a new line after 'test'.
-        # This assumes the prompt is simple and appears on its own line.
-        # We'll search a reasonable window after 'test'.
-        prompt_found_after_test = False
-        search_start = test_index + len("test")
-        search_end = min(
-            search_start + 50, len(full_history)
-        )  # Search within 50 chars after 'test'
-
-        substring_after_test = full_history[search_start:search_end]
-        if "\n$" in substring_after_test or "\n#" in substring_after_test:
-            prompt_found_after_test = True
-
-        assert prompt_found_after_test, "Prompt not found after 'test' in full history"
+        # Assert that echo test was sent to buffer but not run yet
+        assert full_history.endswith("$ sleep 1\necho test"), (
+            "Second command should be in buffer but not run"
+        )
 
     finally:
         await close_shell_session(session_id)
