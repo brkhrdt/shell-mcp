@@ -26,3 +26,6 @@ addopts = [
     "-m", "not integration", # This ensures integration tests are skipped by default
     "--strict-markers",      # (Optional but recommended) Fails if an unregistered mark is used
 ]
+filterwarnings = [
+    'ignore:This process \(pid=.*\) is multi-threaded, use of forkpty\(\) may lead to deadlocks in the child.:DeprecationWarning',
+]
