@@ -202,7 +202,7 @@ async def test_peek_running_command():
         assert len(result) < 50  # Expecting partial output, not the full 5-second wait
 
         # Now, send a newline and check if the sleep command has finished
-        await peek_shell_buffer(session_id, 1)  # Removed assignment to result_peek
+        await peek_shell_buffer(session_id, 1)
         assert "bash" not in result  # new prompt not ready
 
         result = await run_shell_command(session_id, "", timeout=1)
@@ -212,4 +212,61 @@ async def test_peek_running_command():
         await close_shell_session(session_id)
 
 
-# TODO test full buffer history, should include all commands
+@pytest.mark.asyncio
+async def test_full_buffer_history():
+    """Test that the full buffer history correctly captures commands and outputs."""
+    start_result = await start_shell_session(["bash", "--norc", "-i"])
+    session_id = start_result.split("Session ID: ")[1]
+
+    try:
+        # Run a command that takes some time
+        await run_shell_command(session_id, "sleep 1", timeout=0.1)
+        # Run another command immediately after
+        await run_shell_command(session_id, "echo test")
+
+        # Peek the buffer to get the full history
+        full_history = await peek_shell_buffer(session_id, n_lines=100) # Get enough lines to see everything
+
+        # Assert that both commands and their outputs are in the history
+        assert "sleep 1" in full_history
+        assert "echo test" in full_history
+        assert "test" in full_history
+
+        # Assert that "test" appears before the final prompt
+        # This is a bit tricky as prompts can vary. We'll look for "test" followed by a common bash prompt character.
+        # Assuming a typical bash prompt like "$ " or "# "
+        # We need to be careful not to match "test" within the prompt itself if it were to contain it.
+        # A more robust check would involve parsing the prompt, but for a simple test, this is often sufficient.
+        # Let's look for "test" followed by a newline and then a prompt-like character.
+        # The `peek_shell_buffer` should return the raw buffer content.
+        # The prompt is usually on a new line after the command output.
+        # So, we expect something like:
+        # sleep 1
+        # [some output from sleep, if any]
+        # $ echo test
+        # test
+        # $
+        # We need to ensure 'test' is present and then a prompt follows.
+
+        # Find the index of "test"
+        test_index = full_history.find("test")
+        assert test_index != -1, "'test' not found in full history"
+
+        # Look for a prompt character after "test"
+        # Common bash prompts include '$', '#', or specific strings.
+        # We'll check for '$' or '#' on a new line after 'test'.
+        # This assumes the prompt is simple and appears on its own line.
+        # We'll search a reasonable window after 'test'.
+        prompt_found_after_test = False
+        search_start = test_index + len("test")
+        search_end = min(search_start + 50, len(full_history)) # Search within 50 chars after 'test'
+
+        substring_after_test = full_history[search_start:search_end]
+        if "\n$" in substring_after_test or "\n#" in substring_after_test:
+            prompt_found_after_test = True
+        
+        assert prompt_found_after_test, "Prompt not found after 'test' in full history"
+
+    finally:
+        await close_shell_session(session_id)
+
