@@ -29,3 +29,8 @@ addopts = [
 filterwarnings = [
     'ignore:This process \(pid=.*\) is multi-threaded, use of forkpty\(\) may lead to deadlocks in the child.:DeprecationWarning',
 ]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17.1",
+]
